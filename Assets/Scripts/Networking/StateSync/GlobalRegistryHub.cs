@@ -1,3 +1,4 @@
+using Core.StateSync;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -38,6 +39,9 @@ namespace Networking.StateSync
             SessionRegistry = new SessionRegistry();
             GameRegisterTemplate = new GameRegisterTemplate();
             GameInstanceRegister = new GameInstanceRegister();
+
+            // Initialize Core interfaces to avoid circular dependency
+            Core.Games.GameInstanceManager.ClientRegistry = ClientRegistry;
 
             TryHookNetworkCallbacks();
         }

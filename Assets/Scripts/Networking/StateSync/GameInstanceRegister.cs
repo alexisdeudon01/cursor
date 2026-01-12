@@ -1,5 +1,7 @@
+using Core.StateSync;
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
 namespace Networking.StateSync
@@ -249,12 +251,73 @@ namespace Networking.StateSync
 
         public List<GameCommandDto> BuildSpawnCommands(string sessionUid)
         {
-            return GameCommandFactory.BuildSpawnCommands(sessionUid, GetBaseSnapshot());
+            var snapshot = GetBaseSnapshot();
+            var commands = new List<GameCommandDto>();
+            
+            foreach (var entity in snapshot.entities)
+            {
+                if (entity == null || string.IsNullOrEmpty(entity.entityId))
+                    continue;
+                    
+                // Convert Networking.StateSync.GameEntityState to Core.StateSync.GameEntityState format
+                var coreEntity = new Core.StateSync.GameEntityState
+                {
+                    id = new Unity.Collections.FixedString64Bytes(entity.entityId ?? ""),
+                    type = new Unity.Collections.FixedString64Bytes(entity.entityType ?? ""),
+                    ownerClientUid = new Unity.Collections.FixedString64Bytes(entity.ownerClientUid ?? ""),
+                    ownerClientId = entity.ownerClientId,
+                    displayName = new Unity.Collections.FixedString64Bytes(entity.displayName ?? ""),
+                    colorIndex = entity.colorIndex,
+                    prefabType = entity.prefabType,
+                    mapSize = Vector3.zero, // Not stored in Networking.StateSync version
+                    worldOffset = Vector3.zero, // Not stored in Networking.StateSync version
+                    cellX = entity.cellX,
+                    cellY = entity.cellY
+                };
+                
+                commands.Add(GameCommandFactory.CreateSpawnEntity(sessionUid, coreEntity, snapshot.version));
+            }
+            
+            return commands;
         }
 
         public List<GameCommandDto> BuildUpdateCommands(string sessionUid, GameStateDiff diff)
         {
-            return GameCommandFactory.BuildUpdateCommands(sessionUid, diff);
+            var commands = new List<GameCommandDto>();
+            
+            foreach (var entity in diff.updatedEntities)
+            {
+                if (entity == null || string.IsNullOrEmpty(entity.entityId))
+                    continue;
+                    
+                // Convert Networking.StateSync.GameEntityState to Core.StateSync.GameEntityState format
+                var coreEntity = new Core.StateSync.GameEntityState
+                {
+                    id = new Unity.Collections.FixedString64Bytes(entity.entityId ?? ""),
+                    type = new Unity.Collections.FixedString64Bytes(entity.entityType ?? ""),
+                    ownerClientUid = new Unity.Collections.FixedString64Bytes(entity.ownerClientUid ?? ""),
+                    ownerClientId = entity.ownerClientId,
+                    displayName = new Unity.Collections.FixedString64Bytes(entity.displayName ?? ""),
+                    colorIndex = entity.colorIndex,
+                    prefabType = entity.prefabType,
+                    mapSize = Vector3.zero, // Not stored in Networking.StateSync version
+                    worldOffset = Vector3.zero, // Not stored in Networking.StateSync version
+                    cellX = entity.cellX,
+                    cellY = entity.cellY
+                };
+                
+                commands.Add(GameCommandFactory.CreateUpdateEntity(sessionUid, coreEntity, diff.toVersion));
+            }
+            
+            foreach (var entityId in diff.removedEntityIds)
+            {
+                if (string.IsNullOrEmpty(entityId))
+                    continue;
+                    
+                commands.Add(GameCommandFactory.CreateRemoveEntity(sessionUid, entityId));
+            }
+            
+            return commands;
         }
 
         private void Commit()

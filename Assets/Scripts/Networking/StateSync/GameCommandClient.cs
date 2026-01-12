@@ -1,3 +1,4 @@
+using Core.StateSync;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -54,7 +55,9 @@ namespace Networking.StateSync
             EvaluateReadyForVisuals();
 
             // Ensure the view world exists on the client.
+#if !UNITY_SERVER
             EntityViewWorld.EnsureInstance();
+#endif
         }
 
         private void OnDestroy()
@@ -161,7 +164,9 @@ namespace Networking.StateSync
             LastAppliedVersion = 0;
 
             // Clear old entities (new map == new world).
+#if !UNITY_SERVER
             EntityViewWorld.Instance?.ClearAll();
+#endif
 
             OnMapConfigApplied?.Invoke(CurrentConfig);
         }
@@ -172,7 +177,9 @@ namespace Networking.StateSync
             if (!ShouldApplySnapshot(command.Version))
                 return;
 
+#if !UNITY_SERVER
             EntityViewWorld.EnsureInstance().ApplySpawn(command);
+#endif
         }
 
         private void ApplyUpdate(GameCommandDto command)
@@ -180,7 +187,9 @@ namespace Networking.StateSync
             if (!ShouldApplyUpdate(command.Version))
                 return;
 
+#if !UNITY_SERVER
             EntityViewWorld.Instance?.ApplyUpdate(command);
+#endif
         }
 
         private void ApplyRemove(GameCommandDto command)
@@ -188,7 +197,9 @@ namespace Networking.StateSync
             if (!ShouldApplyUpdate(command.Version))
                 return;
 
+#if !UNITY_SERVER
             EntityViewWorld.Instance?.ApplyRemove(command);
+#endif
         }
 
         private bool ShouldApplySnapshot(int version)
@@ -241,7 +252,7 @@ public void RequestResyncNow(string sessionNameFallback = null, string reason = 
     FixedString64Bytes uid = CurrentSessionUid;
     if (uid.IsEmpty && !string.IsNullOrEmpty(sessionNameFallback))
     {
-        uid = sessionNameFallback;
+        uid = new FixedString64Bytes(sessionNameFallback);
     }
 
     if (uid.IsEmpty)
@@ -249,7 +260,7 @@ public void RequestResyncNow(string sessionNameFallback = null, string reason = 
 
     Debug.LogWarning($"[GameCommandClient] Requesting resync: {reason ?? "manual"}");
 
-    var cmd = GameCommandFactory.CreateResyncRequest(uid, LastAppliedVersion);
+    var cmd = GameCommandFactory.CreateResyncRequest(uid);
     SessionRpcHub.Instance?.SendGameCommandServerRpc(cmd);
 }
 
@@ -263,10 +274,14 @@ public void RequestResyncNow(string sessionNameFallback = null, string reason = 
         public bool TryGetLocalPawnTransform(out Transform transform)
         {
             transform = null;
+#if !UNITY_SERVER
             if (EntityViewWorld.Instance == null)
                 return false;
 
             return EntityViewWorld.Instance.TryGetLocalPawnTransform(out transform);
+#else
+            return false;
+#endif
         }
     }
 }

@@ -1,12 +1,15 @@
 using Core.Maps;
 using Core.Simulation;
-using Networking.StateSync;
+using Core.StateSync;
+using Core.Networking;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
+namespace Core.Games
+{
 /// <summary>
 /// Manages active game instances.
 /// 
@@ -18,6 +21,16 @@ using UnityEngine;
 public class GameInstanceManager : MonoBehaviour
 {
     public static GameInstanceManager Instance { get; private set; }
+
+    /// <summary>
+    /// Injected command sender (set by Networking layer to avoid circular dependency).
+    /// </summary>
+    public static IGameCommandSender CommandSender { get; set; }
+
+    /// <summary>
+    /// Injected client registry (set by Networking layer to avoid circular dependency).
+    /// </summary>
+    public static IClientRegistry ClientRegistry { get; set; }
 
     /// <summary>
     /// Event fired when a game instance is created.
@@ -188,13 +201,12 @@ public class GameInstanceManager : MonoBehaviour
         var instance = new GameInstance(sessionName, sessionUid, gameId, gameDef, mapConfig, gridData);
 
         // Spawn player entities
-        var registryHub = GlobalRegistryHub.Instance;
         var totalPlayers = playerData?.Count ?? 0;
         for (int i = 0; i < totalPlayers; i++)
         {
             var (clientId, playerName) = playerData[i];
 
-            var clientUid = registryHub?.ClientRegistry?.GetClientUid(clientId) ?? string.Empty;
+            var clientUid = ClientRegistry?.GetClientUid(clientId) ?? string.Empty;
             var spawnPos = gameDef.GetSpawnPosition(i, totalPlayers, mapConfig);
             var spawnCell = GridMapUtils.WorldToCell(mapConfig, spawnPos);
 
@@ -337,8 +349,7 @@ public class GameInstanceManager : MonoBehaviour
             return false;
         }
 
-        var registryHub = GlobalRegistryHub.Instance;
-        var clientUid = registryHub?.ClientRegistry?.GetClientUid(clientId) ?? string.Empty;
+        var clientUid = ClientRegistry?.GetClientUid(clientId) ?? string.Empty;
 
         var totalPlayersAfterJoin = inst.PlayerIds.Count + 1;
         var joinIndex = inst.PlayerIds.Count;
@@ -362,11 +373,11 @@ public class GameInstanceManager : MonoBehaviour
         var existingTargets = new List<ulong>(inst.PlayerIds);
         existingTargets.Remove(clientId);
 
-        if (existingTargets.Count > 0)
+        if (existingTargets.Count > 0 && CommandSender != null)
         {
             var rpcParams = BuildClientRpcParams(existingTargets);
             var spawnCmd = inst.BuildSpawnCommand(entityId, inst.Version);
-            SessionRpcHub.Instance?.SendGameCommandClientRpc(spawnCmd, rpcParams);
+            CommandSender.SendGameCommandClientRpc(spawnCmd, rpcParams);
         }
 
         // Send full snapshot to late joiner
@@ -411,11 +422,11 @@ public class GameInstanceManager : MonoBehaviour
         if (inst.PlayerIds.Count > 0)
         {
             var rpcParams = BuildClientRpcParams(inst.PlayerIds);
-            var removeCmd = GameCommandFactory.CreateRemoveEntity(inst.SessionUid, ToFixedString(entityId).ToString(), inst.Version);
+            var removeCmd = GameCommandFactory.CreateRemoveEntity(inst.SessionUid, ToFixedString(entityId).ToString());
 
             scratchCommands.Clear();
             scratchCommands.Add(removeCmd);
-            SessionRpcHub.Instance.SendGameCommandBatchClientRpc(scratchCommands.ToArray(), rpcParams);
+            CommandSender?.SendGameCommandBatchClientRpc(scratchCommands.ToArray(), rpcParams);
         }
 
         return true;
@@ -468,7 +479,7 @@ public void SendFullSnapshotToClients(string sessionName, IReadOnlyList<ulong> t
 
 private void SendFullSnapshotInternal(GameInstance inst, List<ulong> targets, bool includeMapConfig)
 {
-    if (inst == null || inst.MapConfig == null || SessionRpcHub.Instance == null)
+    if (inst == null || inst.MapConfig == null || CommandSender == null)
     {
         return;
     }
@@ -493,7 +504,7 @@ private void SendFullSnapshotInternal(GameInstance inst, List<ulong> targets, bo
 
     if (scratchCommands.Count > 0)
     {
-        SessionRpcHub.Instance.SendGameCommandBatchClientRpc(scratchCommands.ToArray(), rpcParams);
+        CommandSender.SendGameCommandBatchClientRpc(scratchCommands.ToArray(), rpcParams);
     }
 }
 
@@ -510,7 +521,7 @@ private void ReplicateDirty(GameInstance inst)
         return;
     }
 
-    if (SessionRpcHub.Instance == null)
+    if (CommandSender == null)
     {
         return;
     }
@@ -542,7 +553,7 @@ private void ReplicateDirty(GameInstance inst)
 
         var cmd = GameCommandFactory.CreateUpdateEntity(inst.SessionUid, new GameEntityState 
         { 
-            entityId = ToFixedString(entityId).ToString(),
+            id = ToFixedString(entityId),
             cellX = cellX,
             cellY = cellY
         }, inst.Version);
@@ -550,7 +561,7 @@ private void ReplicateDirty(GameInstance inst)
         scratchCommands.Add(cmd);
     }
 
-    SessionRpcHub.Instance.SendGameCommandBatchClientRpc(scratchCommands.ToArray(), rpcParams);
+    CommandSender.SendGameCommandBatchClientRpc(scratchCommands.ToArray(), rpcParams);
 
     inst.World.ClearDirty();
 }
@@ -693,4 +704,5 @@ public sealed class GameInstance
         PlayerIds.Clear();
         World.ClearDirty();
     }
+}
 }

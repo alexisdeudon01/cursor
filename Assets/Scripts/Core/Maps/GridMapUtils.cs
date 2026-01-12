@@ -1,5 +1,5 @@
 using UnityEngine;
-using Networking.StateSync;
+using Core.StateSync;
 
 namespace Core.Maps
 {

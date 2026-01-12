@@ -3,6 +3,7 @@
     "references": [
         "GUID:8c3a8e0b3c3b4c4a8e0b3c3b4c4a8e0b3",
         "Unity.Netcode.Runtime",
+        "Unity.Collections",
         "Networking.Shared"
     ],
     "includePlatforms": [

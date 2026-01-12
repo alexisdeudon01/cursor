@@ -1,5 +1,5 @@
 using Core.Maps;
-using Networking.StateSync;
+using Core.StateSync;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;

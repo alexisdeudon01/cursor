@@ -1,8 +1,8 @@
 //using Meryel.UnityCodeAssist.Serilog;
 //using Meryel.UnityCodeAssist.Serilog.Core;
-using System.Linq;
-using UnityEditor;
 using UnityEngine;
+using UnityEditor;
+using System.Linq;
 
 #if ELOGGER
 

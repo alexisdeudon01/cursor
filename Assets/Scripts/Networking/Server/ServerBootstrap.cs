@@ -3,7 +3,7 @@ using System.Collections;
 using System.Net;
 using System.Net.Sockets;
 using Core.Games;
-using Networking.StateSync;
+using Core.StateSync;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;

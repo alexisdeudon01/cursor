@@ -1,5 +1,7 @@
 using Core.Utilities;
+using Core.Networking;
 using System.Linq;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -23,7 +25,7 @@ namespace Core.Utilities
         /// </summary>
         public static string GetPlayerName(ulong clientId)
         {
-            var player = GetPlayerComponent<DefaultPlayer>(clientId);
+            var player = GetPlayerNameProvider(clientId);
             if (player != null)
             {
                 // Check if NameAgent NetworkVariable is initialized
@@ -41,7 +43,7 @@ namespace Core.Utilities
         /// </summary>
         public static bool TryGetPlayerName(ulong clientId, out string playerName)
         {
-            var player = GetPlayerComponent<DefaultPlayer>(clientId);
+            var player = GetPlayerNameProvider(clientId);
             if (player != null && !player.NameAgent.Value.IsEmpty)
             {
                 playerName = player.NameAgent.Value.ToString();
@@ -50,6 +52,29 @@ namespace Core.Utilities
 
             playerName = $"Player{clientId}";
             return false;
+        }
+
+        /// <summary>
+        /// Get IPlayerNameProvider from player's NetworkObject.
+        /// Returns null if player not found or interface not implemented.
+        /// </summary>
+        private static IPlayerNameProvider GetPlayerNameProvider(ulong clientId)
+        {
+            var networkObject = GetPlayerNetworkObject(clientId);
+            if (networkObject == null)
+                return null;
+
+            // Try to find a component that implements IPlayerNameProvider
+            var components = networkObject.GetComponents<Component>();
+            foreach (var component in components)
+            {
+                if (component is IPlayerNameProvider provider)
+                {
+                    return provider;
+                }
+            }
+
+            return null;
         }
 
         #endregion
@@ -150,8 +175,18 @@ namespace Core.Utilities
             var players = new System.Collections.Generic.List<NetworkObject>();
             foreach (var kvp in spawnManager.SpawnedObjects)
             {
-                // Filter for player objects (assuming they have DefaultPlayer component)
-                if (kvp.Value.GetComponent<DefaultPlayer>() != null)
+                // Filter for player objects (assuming they have IPlayerNameProvider interface)
+                var components = kvp.Value.GetComponents<Component>();
+                bool hasPlayerNameProvider = false;
+                foreach (var comp in components)
+                {
+                    if (comp is IPlayerNameProvider)
+                    {
+                        hasPlayerNameProvider = true;
+                        break;
+                    }
+                }
+                if (hasPlayerNameProvider)
                 {
                     players.Add(kvp.Value);
                 }

@@ -1,3 +1,4 @@
+using Core.Networking;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -22,7 +23,8 @@ public class NetworkBootstrap : MonoBehaviour
     [SerializeField] private NetworkObject sessionRpcHubPrefab;
 
     [Header("Bootstrap UI (client only)")]
-    [SerializeField] private NetworkBootstrapProgressViewClient progressView;
+    [SerializeField] private MonoBehaviour progressViewMonoBehaviour; // Serialized as MonoBehaviour, cast to INetworkBootstrapProgressView
+    private INetworkBootstrapProgressView progressView;
     [SerializeField] private bool showProgressUiOnClient = true;
     [SerializeField] private bool loadMenuAfterBootstrap = true;
     [SerializeField] private string menuSceneName = SceneNames.Menu;
@@ -989,63 +991,55 @@ public class NetworkBootstrap : MonoBehaviour
     }
 
     private void EnsureProgressView()
-{
-    // 1) Si déjà set et dans la scène, ok
-    if (progressView != null && IsProgressViewInScene(progressView))
-        return;
-
-    // 2) Sinon cherche dans la scène un progress view configuré
-    var found = FindProgressViewInScene();
-    if (found != null)
     {
-        progressView = found;
-        return;
+        // 1) Si déjà set et dans la scène, ok
+        if (progressView != null)
+            return;
+
+        // 2) Initialiser depuis le MonoBehaviour sérialisé
+        if (progressViewMonoBehaviour != null)
+        {
+            progressView = progressViewMonoBehaviour as INetworkBootstrapProgressView;
+            if (progressView != null)
+                return;
+        }
+
+        // 3) Sinon cherche dans la scène un progress view configuré
+        var found = FindProgressViewInScene();
+        if (found != null)
+        {
+            progressView = found;
+            return;
+        }
+
+        // 4) Sinon: erreur claire (au lieu de créer un truc inutilisable)
+        Debug.LogError("[NetworkBootstrap] No INetworkBootstrapProgressView found in scene. " +
+                       "Add NetworkBootstrapUI prefab to the scene and assign it.");
     }
 
-    // 3) Sinon: erreur claire (au lieu de créer un truc inutilisable)
-    Debug.LogError("[NetworkBootstrap] No NetworkBootstrapProgressViewClient found in scene. " +
-                   "Add NetworkBootstrapUI prefab to the scene and assign it.");
-}
-
-
-    private NetworkBootstrapProgressViewClient FindProgressViewInScene()
+    private INetworkBootstrapProgressView FindProgressViewInScene()
     {
-        NetworkBootstrapProgressViewClient[] found = FindObjectsByType<NetworkBootstrapProgressViewClient>(
+        // Chercher tous les MonoBehaviour et vérifier s'ils implémentent l'interface
+        MonoBehaviour[] allMonoBehaviours = FindObjectsByType<MonoBehaviour>(
             FindObjectsInactive.Include,
             FindObjectsSortMode.None
         );
 
-        if (found == null || found.Length == 0)
+        if (allMonoBehaviours == null || allMonoBehaviours.Length == 0)
         {
             return null;
         }
 
-        for (int i = 0; i < found.Length; i++)
+        for (int i = 0; i < allMonoBehaviours.Length; i++)
         {
-            NetworkBootstrapProgressViewClient view = found[i];
-            if (IsProgressViewInScene(view))
+            if (allMonoBehaviours[i] is INetworkBootstrapProgressView view && 
+                allMonoBehaviours[i].gameObject.scene.IsValid())
             {
                 return view;
             }
         }
 
         return null;
-    }
-
-    private bool IsProgressViewInScene(NetworkBootstrapProgressViewClient view)
-    {
-        if (view == null)
-        {
-            return false;
-        }
-
-        GameObject go = view.gameObject;
-        if (go == null)
-        {
-            return false;
-        }
-
-        return go.scene.IsValid();
     }
 
     private ISceneServiceSync ResolveSceneService()

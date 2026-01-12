@@ -1,4 +1,4 @@
-using Networking.StateSync;
+using Core.StateSync;
 using UnityEngine;
 
 /// <summary>

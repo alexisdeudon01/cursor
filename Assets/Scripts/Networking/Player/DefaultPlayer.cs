@@ -1,26 +1,30 @@
+using Core.Networking;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
-public class DefaultPlayer : NetworkBehaviour
+public class DefaultPlayer : NetworkBehaviour, IPlayerNameProvider
 {
     // Player name synced to everyone - SERVER AUTHORITATIVE
-    public NetworkVariable<FixedString64Bytes> NameAgent = new NetworkVariable<FixedString64Bytes>(
+    private NetworkVariable<FixedString64Bytes> _nameAgent = new NetworkVariable<FixedString64Bytes>(
         new FixedString64Bytes("Player"),
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server  // Changed: Only server can write
     );
 
+    // Implementation of IPlayerNameProvider interface
+    public NetworkVariable<FixedString64Bytes> NameAgent => _nameAgent;
+
     [SerializeField] private NetworkObject squarePrefab;
 
     private void OnEnable()
     {
-        NameAgent.OnValueChanged += OnNameChanged;
+        _nameAgent.OnValueChanged += OnNameChanged;
     }
 
     private void OnDisable()
     {
-        NameAgent.OnValueChanged -= OnNameChanged;
+        _nameAgent.OnValueChanged -= OnNameChanged;
     }
 
     public override void OnNetworkSpawn()
@@ -31,7 +35,7 @@ public class DefaultPlayer : NetworkBehaviour
 
         if (IsServer)
         {
-            RegisterPlayer(NameAgent.Value);
+            RegisterPlayer(_nameAgent.Value);
         }
     }
 
@@ -65,7 +69,7 @@ public class DefaultPlayer : NetworkBehaviour
 
         // TODO: Add profanity filter, character validation, etc.
 
-        NameAgent.Value = new FixedString64Bytes(newName);
+        _nameAgent.Value = new FixedString64Bytes(newName);
         Debug.Log($"[DefaultPlayer] Client {OwnerClientId} name set to: {newName}");
     }
 

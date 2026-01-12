@@ -1,8 +1,9 @@
+using Core.Networking;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class NetworkBootstrapProgressViewClient : MonoBehaviour
+public class NetworkBootstrapProgressViewClient : MonoBehaviour, INetworkBootstrapProgressView
 {
     [Header("UI Toolkit (Mode A: Clone UXML)")]
     [SerializeField] private UIDocument uiDocument;

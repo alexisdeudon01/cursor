@@ -1,3 +1,5 @@
+using Core.StateSync;
+using Core.Networking;
 using System;
 using System.Collections.Generic;
 using Unity.Netcode;
@@ -16,7 +18,7 @@ namespace Networking.StateSync
         }
     }
 
-    public sealed class ClientRegistry
+    public sealed class ClientRegistry : IClientRegistry
     {
         private readonly Dictionary<string, ClientNode> clients = new Dictionary<string, ClientNode>();
 

@@ -1,6 +1,9 @@
 using Networking.RpcHandlers;
 using Networking.RpcHandlers.Handlers;
 using Networking.StateSync;
+using Core.StateSync;
+using Core.Networking;
+using Core.Games;
 using System;
 using System.Collections.Generic;
 using Unity.Netcode;
@@ -10,7 +13,7 @@ using UnityEngine.SceneManagement;
 // Hub RPC global pour gérer les sessions, indépendant du player prefab.
 // Met ce script sur un NetworkPrefab dédié (ex: TestRPC), spawné côté serveur une fois au démarrage.
 // REFACTORED: Now delegates to specialized handlers (SessionLifecycleHandler, GameStartHandler, etc.)
-public class SessionRpcHub : NetworkBehaviour
+public class SessionRpcHub : NetworkBehaviour, IGameCommandSender
 {
     public static SessionRpcHub Instance { get; private set; }
 
@@ -45,6 +48,9 @@ public class SessionRpcHub : NetworkBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // Initialize Core interfaces to avoid circular dependency
+        GameInstanceManager.CommandSender = this;
 
         // Initialize handlers
         InitializeHandlers();
@@ -223,7 +229,8 @@ public class SessionRpcHub : NetworkBehaviour
     public void SendSessionErrorClientRpc(string message, ClientRpcParams clientRpcParams = default)
     {
         Debug.LogWarning($"[SessionRpcHub] Session error: {message}");
-        ToastNotification.Show(message, ToastNotification.ToastType.Error);
+        // Toast notification removed - use events instead to avoid UI dependency
+        // ToastNotification.Show(message, ToastNotification.ToastType.Error);
     }
 
     [ClientRpc]
@@ -267,8 +274,8 @@ public void SendGameCommandBatchClientRpc(GameCommandDto[] commands, ClientRpcPa
     {
         Debug.LogWarning($"[SessionRpcHub] Game start failed: {errorMessage} (Reason: {reason})");
 
-        // Show toast notification
-        ToastNotification.Show(errorMessage, ToastNotification.ToastType.Warning, 5f);
+        // Toast notification removed - use events instead to avoid UI dependency
+        // ToastNotification.Show(errorMessage, ToastNotification.ToastType.Warning, 5f);
 
         // Notify listeners (UI, debug tools, etc.) without referencing UI classes directly.
         GameStartFailed?.Invoke(errorMessage, reason);
