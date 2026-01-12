@@ -203,6 +203,70 @@ def create_analysis_report(version: int, analysis: Dict) -> Path:
     report_file.write_text(report, encoding='utf-8')
     return report_file
 
+def generate_uml_diagrams(version: int):
+    """Génère les diagrammes UML pour cette version."""
+    print("📊 Génération des diagrammes UML...")
+    try:
+        # Essayer python3 d'abord, puis python
+        python_cmd = "python3"
+        result = subprocess.run(
+            ["which", "python3"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            python_cmd = "python"
+        
+        result = subprocess.run(
+            [python_cmd, ".github/scripts/generate-uml-diagrams.py", str(version)],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+        if result.returncode == 0:
+            print("✅ Diagrammes UML générés")
+            print(result.stdout)
+        else:
+            print(f"⚠️ Erreur génération diagrammes: {result.stderr}")
+    except Exception as e:
+        print(f"⚠️ Erreur génération diagrammes: {e}")
+
+def test_network_connection():
+    """Teste la connexion réseau et la configuration."""
+    print("🔌 Tests de connexion réseau...")
+    
+    tests = {
+        "encryption_disabled": False,
+        "transport_configured": False,
+        "network_prefabs_registered": False
+    }
+    
+    # Vérifier UseEncryption = false
+    for script_file in PROJECT_ROOT.rglob("*.cs"):
+        if "Bootstrap" in script_file.name:
+            content = script_file.read_text(encoding='utf-8', errors='ignore')
+            if "UseEncryption = false" in content:
+                tests["encryption_disabled"] = True
+                break
+    
+    # Vérifier configuration transport
+    for script_file in PROJECT_ROOT.rglob("*.cs"):
+        if "Bootstrap" in script_file.name or "Network" in script_file.name:
+            content = script_file.read_text(encoding='utf-8', errors='ignore')
+            if "UnityTransport" in content and "ConnectionData" in content:
+                tests["transport_configured"] = True
+                break
+    
+    # Vérifier NetworkPrefabs
+    if (PROJECT_ROOT / "Assets/DefaultNetworkPrefabs.asset").exists():
+        tests["network_prefabs_registered"] = True
+    
+    for test_name, result in tests.items():
+        status = "✅" if result else "❌"
+        print(f"  {status} {test_name}: {'OK' if result else 'ÉCHEC'}")
+    
+    return all(tests.values())
+
 def main():
     """Fonction principale."""
     print("🚀 Démarrage du cycle d'amélioration avec IA...")
@@ -211,12 +275,20 @@ def main():
         print("⚠️ Mode simulation: ANTHROPIC_API_KEY non configuré")
         print("💡 Pour activer l'IA, ajoutez ANTHROPIC_API_KEY dans les secrets GitHub")
     
+    # Tests de connexion
+    network_ok = test_network_connection()
+    if not network_ok:
+        print("⚠️ Certains tests de connexion ont échoué")
+    
     # Obtenir la version actuelle
     current_version = get_latest_agent_version()
     next_version = current_version + 1
     
     print(f"📊 Version actuelle: {current_version}")
     print(f"📊 Prochaine version: {next_version}")
+    
+    # Générer les diagrammes UML
+    generate_uml_diagrams(next_version)
     
     # Analyser avec l'IA
     print("🤖 Analyse du codebase avec IA...")

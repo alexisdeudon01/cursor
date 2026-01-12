@@ -40,7 +40,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          pip install -q requests
+          pip install -q requests mermaid-cli || echo "mermaid-cli non disponible, utilisation API en ligne"
           
       - name: Run Auto-Improve Script with AI
         env:
@@ -56,6 +56,11 @@ jobs:
             echo "⚠️ Mode basique (pas d'IA) - configurez ANTHROPIC_API_KEY pour activer l'IA"
             python .github/scripts/auto-improve.py
           fi
+          
+      - name: Generate UML Diagrams
+        run: |
+          VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
+          python3 .github/scripts/generate-uml-diagrams.py $VERSION
           
       - name: Commit and Push Changes
         if: github.event_name != 'pull_request'
