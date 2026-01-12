@@ -1,7 +1,7 @@
 #!/bin/bash
 # Script complet de vérification - Vérifie TOUT
 
-set -e
+set +e  # Ne pas arrêter sur erreur pour continuer les vérifications
 
 echo "🔍 VÉRIFICATION COMPLÈTE DU PROJET"
 echo "=================================="
@@ -13,7 +13,19 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-PROJECT_DIR="/home/tor/wkspaces/mo2"
+# Détecter automatiquement le dossier du projet
+if [ -n "$1" ]; then
+    PROJECT_DIR="$1"
+else
+    # Essayer plusieurs chemins possibles
+    if [ -d "/home/tor/wkspaces/mo2" ]; then
+        PROJECT_DIR="/home/tor/wkspaces/mo2"
+    elif [ -d "$(pwd)" ] && [ -d "$(pwd)/.git" ]; then
+        PROJECT_DIR="$(pwd)"
+    else
+        PROJECT_DIR="/home/tor/wkspaces/mo2"
+    fi
+fi
 
 # Fonction de vérification
 check() {
@@ -28,14 +40,23 @@ check() {
 
 # 1. Vérifier le dossier
 echo "📁 1. Vérification du dossier..."
+echo "   Chemin testé: $PROJECT_DIR"
+
 if [ -d "$PROJECT_DIR" ]; then
     check "Dossier existe: $PROJECT_DIR"
-    cd "$PROJECT_DIR" || exit 1
+    cd "$PROJECT_DIR" || {
+        echo -e "${RED}❌ Impossible d'accéder au dossier${NC}"
+        echo "   Essaie avec le dossier actuel..."
+        PROJECT_DIR="$(pwd)"
+    }
 else
-    echo -e "${RED}❌ Dossier non trouvé: $PROJECT_DIR${NC}"
-    echo "Création du dossier..."
-    mkdir -p "$PROJECT_DIR"
-    cd "$PROJECT_DIR" || exit 1
+    echo -e "${YELLOW}⚠️  Dossier non trouvé: $PROJECT_DIR${NC}"
+    echo "   Utilisation du dossier actuel: $(pwd)"
+    PROJECT_DIR="$(pwd)"
+    cd "$PROJECT_DIR" || {
+        echo -e "${RED}❌ Erreur: Impossible d'accéder au dossier${NC}"
+        exit 1
+    }
 fi
 
 # 2. Vérifier Git
