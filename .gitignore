@@ -257,6 +257,13 @@ Thumbs.db
 .vscode/
 *.code-workspace
 
+# Cursor - mais on garde les agents pour versioning
+.cursor/agents/*.md
+!.cursor/agents/thebestclient*.md
+!.cursor/agents/review-playbook-*.md
+!.cursor/agents/*-analysis-report.md
+!.cursor/agents/improvement-log.md
+
 # Visual Studio configuration files
 .vsconfig
 *.slnx

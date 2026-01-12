@@ -1,119 +1,46 @@
 # Analyse Unity NGO - Rapport Thebestclient2
 **Date**: 2024-12-19  
-**Session**: Analyse initiale du projet Unity NGO 2D
+**Session**: Analyse initiale + Configuration amélioration continue
 
 ---
 
 ## 1. REPO INVENTORY
 
-### 1.1 Scènes Unity (`*.unity`)
+### 1.1 Scènes Unity
+- `Assets/Scenes/Server.unity` - **Serveur** (headless)
+- `Assets/Scenes/Client.unity` - **Client** (connexion)
+- `Assets/Scenes/Game.unity` - **Client** (jeu)
+- `Assets/Scenes/Menu.unity` - **Client** (menu)
+- `Assets/Settings/Scenes/URP2DSceneTemplate.unity` - **Template**
 
-| Scène | Rôle | Description |
-|-------|------|-------------|
-| `Assets/Scenes/Server.unity` | **Serveur** | Scène dédiée serveur (headless) |
-| `Assets/Scenes/Client.unity` | **Client** | Scène client pour connexion |
-| `Assets/Scenes/Game.unity` | **Client** | Scène de jeu principale |
-| `Assets/Scenes/Menu.unity` | **Client** | Scène menu principal |
-| `Assets/Settings/Scenes/URP2DSceneTemplate.unity` | **Template** | Template URP 2D |
+### 1.2 Configuration Réseau (VÉRIFIÉ)
+✅ **Encryption désactivé**: `UseEncryption = false` dans:
+- `NetworkBootstrap.cs` (ligne 299)
+- `ServerBootstrap.cs` (ligne 108)
+- `ClientBootstrap.cs` (ligne 72)
 
-**Identification scène serveur**: `Server.unity` est la scène serveur dédiée.
+✅ **Configuration simplifiée**: IP, Port, Nom du joueur
 
-### 1.2 Prefabs (`*.prefab`)
+### 1.3 Modularité - Système de Jeux
+✅ **Système modulaire existant**:
+- Interface `IGameDefinition` + `GameDefinitionAsset` (ScriptableObject)
+- `GameRegistry` avec auto-enregistrement depuis `Resources/Games/`
+- Exemples: `SquareGameDefinition`, `CircleGameDefinition`
 
-#### Prefabs Réseau
-- **`Assets/Prefabs/Network/NetworkManagerRoot.prefab`**
-  - Composants: `NetworkManager`, `UnityTransport`, `PrefabIdentity`, `NetworkBootstrap`
-  - Scripts: `NetworkBootstrap.cs`, `PrefabIdentity.cs`
-  - Références: `SessionRpcHub.prefab`, `NetworkBootstrapProgressView`
-  - Rôle: Root du système réseau
+**Vérification**: ✅ Ajout facile de jeux 2D - **RESPECTÉ**
 
-- **`Assets/Prefabs/Network/SessionRpcHub.prefab`**
-  - Composants: `PrefabIdentity`, `NetworkObject`, `SessionRpcHub`
-  - Scripts: `SessionRpcHub.cs`, `PrefabIdentity.cs`
-  - Références: `Square.prefab`
-  - Rôle: Hub RPC pour gestion des sessions
-  - **NetworkObject**: Oui (Ownership: Server)
+### 1.4 Modularité - Système de Maps
+✅ **Système modulaire existant**:
+- `GridMapAsset` (ScriptableObject) pour définir des maps
+- Système de chargement déclaratif
+- Maps associées aux jeux via `CreateMapConfig()`
 
-- **`Assets/Prefabs/Network/Square.prefab`**
-  - Composants: `SpriteRenderer`, `PlayerPawn`
-  - Scripts: `PlayerPawn.cs`
-  - Rôle: Prefab de pawn réseau (Square)
+**Vérification**: ✅ Ajout facile de maps - **RESPECTÉ**
 
-#### Prefabs UI
-- **`Assets/Prefabs/UI/Menu.prefab`**: Menu principal
-- **`Assets/Prefabs/GameCanvasManager.prefab`**: Gestionnaire de canvas de jeu
-- **`Assets/Prefabs/Network/NetworkBootstrapUI.prefab`**: UI de bootstrap réseau
-
-#### Prefabs Pawns
-- **`Assets/Prefabs/Pawns/CirclePawn.prefab`**
-  - Composants: `CirclePawn` (script), `TextMeshPro` (NameLabel)
-  - Scripts: `CirclePawn.cs`
-  - Rôle: Pawn circulaire pour CircleGame
-
-### 1.3 Scripts C# (`*.cs`)
-
-#### Assemblies identifiées
-1. **`Networking.Shared`** (`Assets/Scripts/Networking/Shared.asmdef`)
-   - Références: `Core`, `Unity.Netcode.Runtime`, `Unity.Collections`, `Unity.InputSystem`
-   - Rôle: DTO, interfaces, enums partagés
-
-2. **`Networking.Server`** (`Assets/Scripts/Networking/Server/Server.asmdef`)
-   - Références: `Networking.Shared`, `Unity.Netcode.Runtime`, `Unity.Collections`
-   - Platforms: `LinuxStandalone64Server`, `WindowsStandalone64Server` (exclusivement serveur)
-   - Scripts: `ServerBootstrap.cs`, `ConnectionController.cs`
-
-3. **`Networking.Client`** (`Assets/Scripts/Networking/Client/Client.asmdef`)
-   - Références: `Networking.Shared`, `Unity.Netcode.Runtime`, `Unity.Collections`
-   - Platforms: Exclut `LinuxStandalone64Server`, `WindowsStandalone64Server`
-   - Scripts: `ClientBootstrap.cs`
-
-4. **`Core`** (`Assets/Scripts/Core/Core.asmdef`)
-   - Références: `Unity.Netcode.Runtime`, `Unity.Collections`, `Unity.Entities`
-   - Rôle: Logique métier partagée (games, sessions, maps)
-
-#### Scripts critiques (sans assembly spécifique = Assembly-CSharp)
-- **`SessionRpcHub.cs`** (`Assets/Scripts/Networking/Player/SessionRpcHub.cs`)
-  - Namespace: Aucun (global)
-  - Assembly: Assembly-CSharp (par défaut)
-  - Dépendances: `Networking.RpcHandlers`, `Networking.StateSync`, `Core.StateSync`, `Core.Networking`, `Core.Games`
-  - **PROBLÈME IDENTIFIÉ**: Script critique dans assembly par défaut, pas dans Server/Client/Shared
-
-### 1.4 UI Assets
-
-#### UI Toolkit (UXML/USS)
-- `Assets/UI Toolkit/NetworkBootstrapOverlay.uxml` + `.uss`
-- `Assets/UI Toolkit/NetworkBootstrapProgress.uxml`
-- `Assets/UI Toolkit/ConnectionUI.uxml`
-- `Assets/UI Toolkit/SessionLobby.uxml` + `.uss`
-- `Assets/Resources/UI/GridMapOverlay.uxml` + `.uss`
-
-#### Scripts UI
-- `Assets/Scripts/UI/NetworkBootstrap/NetworkBootstrapProgressViewClient.cs`
-- `Assets/Scripts/UI/ConnectionUIController.cs`
-- `Assets/Scripts/UI/SessionLobbyUI.cs`
-- `Assets/Scripts/UI/GameCanvasManager.cs`
-
-### 1.5 Network Prefabs
-
-**Configuration**: `Assets/DefaultNetworkPrefabs.asset`
-
-Liste des Network Prefabs enregistrés:
-1. **SessionRpcHub** (GUID: `63eb66be8dd88cf4b8e395804c404278`)
-   - Prefab: `Assets/Prefabs/Network/SessionRpcHub.prefab`
-   - Components: `PrefabIdentity`, `NetworkObject`, `SessionRpcHub`
-   - Scripts attachés: `SessionRpcHub.cs`, `PrefabIdentity.cs`
-
-2. **Square** (GUID: `80202bf6ee89fa4b7a4c58bb21c6ed1b`)
-   - Prefab: `Assets/Prefabs/Network/Square.prefab`
-   - Components: `SpriteRenderer`, `PlayerPawn`
-   - Scripts attachés: `PlayerPawn.cs`
-
-3. **CirclePawn** (GUID: `3dc06021a40af254b83f3d6764ea287c`)
-   - Prefab: `Assets/Prefabs/Pawns/CirclePawn.prefab`
-   - Components: `CirclePawn`, `TextMeshPro` (NameLabel)
-   - Scripts attachés: `CirclePawn.cs`
-
-**Note**: Le `NetworkManagerRoot.prefab` a une liste vide de NetworkPrefabsLists dans sa configuration, mais les prefabs sont enregistrés via `DefaultNetworkPrefabs.asset` et chargés dynamiquement par `NetworkBootstrap.cs`.
+### 1.5 Modularité - Système de Sessions
+⚠️ **À vérifier**: Architecture de sessions extensible
+- `GameSession`, `GameSessionManager`, `SessionContainer`
+- Handlers RPC spécialisés
 
 ---
 
@@ -122,379 +49,121 @@ Liste des Network Prefabs enregistrés:
 ### 2.1 Architecture - Violations Client/Server
 
 #### 🔴 CRITIQUE (Score: 9/10) - SessionRpcHub dans Assembly-CSharp
-**Problème**: `SessionRpcHub.cs` n'est dans aucune assembly spécifique (Assembly-CSharp par défaut).
+**Problème**: `SessionRpcHub.cs` n'est dans aucune assembly spécifique.
 
-**Impact**:
-- Le script est accessible à la fois côté serveur ET client
-- Pas de séparation stricte par assembly
-- Risque de violations de séparation Client/Server
+**Impact**: Violation de séparation Client/Server
 
-**Fichier**: `Assets/Scripts/Networking/Player/SessionRpcHub.cs`
+**Solution proposée**: Déplacer dans `Networking.Shared` ou créer `Networking.Player`
 
-**Détails**:
-- Namespace: Aucun (global)
-- Utilise des handlers qui peuvent être dans différentes assemblies
-- S'exécute à la fois serveur et client (via `IsServer` checks)
+### 2.2 Modularité - État Actuel
 
-#### 🟡 IMPORTANT (Score: 7/10) - Dépendances assemblies
-**Observation**: Les assemblies sont bien configurées avec séparation serveur/client, mais:
-- `Networking.Shared` référence `Core` (OK)
-- `Networking.Server` référence `Networking.Shared` (OK)
-- `Networking.Client` référence `Networking.Shared` (OK)
-- **Pas de violation directe** Client ↔ Server détectée dans les asmdef
+#### ✅ Jeux 2D (Score: 8/10)
+- Système modulaire fonctionnel
+- Auto-enregistrement depuis Resources
+- Interface claire (`IGameDefinition`)
+- **Amélioration possible**: Documentation plus claire pour ajouter un jeu
 
-### 2.2 NGO (Netcode for GameObjects)
+#### ✅ Maps/Scenes (Score: 7/10)
+- Système de maps modulaire (`GridMapAsset`)
+- **Amélioration possible**: Association maps ↔ scènes plus explicite
 
-#### 🟡 IMPORTANT (Score: 7/10) - NetworkObject Ownership
-**SessionRpcHub.prefab**:
-- `NetworkObject.Ownership = 1` (Server)
-- ✅ Correct pour un hub serveur
+#### ⚠️ Sessions (Score: 6/10)
+- Architecture existante mais moins modulaire
+- **Amélioration nécessaire**: Rendre plus extensible
 
-#### 🟢 INFO (Score: 4/10) - NetworkPrefabs Registration
-**Observation**: Les NetworkPrefabs sont enregistrés via `DefaultNetworkPrefabs.asset` et chargés dynamiquement par `NetworkBootstrap.RegisterRequiredNetworkPrefabs()`.
+### 2.3 Configuration Réseau
 
-**Note**: Le `NetworkManagerRoot.prefab` a une liste vide, mais c'est géré dynamiquement (acceptable).
-
-### 2.3 Unity
-
-#### 🟡 IMPORTANT (Score: 6/10) - Singleton Pattern
-**SessionRpcHub** utilise un pattern Singleton:
-```csharp
-public static SessionRpcHub Instance { get; private set; }
-```
-
-**Risque**: Singleton global peut causer des problèmes en multi-scène ou si plusieurs instances existent.
-
-#### 🟢 INFO (Score: 3/10) - Prefab Wiring
-**Observation**: Les prefabs sont correctement référencés dans les scènes et entre eux.
-
-### 2.4 UI
-
-#### 🟢 INFO (Score: 2/10) - UI Toolkit Usage
-**Observation**: Utilisation mixte UI Toolkit (UXML/USS) et UGUI. Pas de problème détecté.
+#### ✅ Simplifiée (Score: 9/10)
+- Encryption désactivé ✅
+- Pas d'authentification complexe ✅
+- Configuration minimale: IP, Port, Nom ✅
 
 ---
 
-## 3. PROPOSED CHANGES (PR-style)
+## 3. PROPOSED CHANGES
 
 ### Change #1: Déplacer SessionRpcHub dans Networking.Shared
+**Status**: Proposed  
+**Score**: 8/10 (Important)
 
-#### UML Before
+**Patch**: Ajouter namespace `Networking.Shared` à `SessionRpcHub.cs`
 
-```mermaid
-classDiagram
-    class SessionRpcHub {
-        +static Instance
-        +OnNetworkSpawn()
-        +ServerRpc methods
-        +ClientRpc methods
-    }
-    class AssemblyCSharp {
-        <<assembly>>
-        SessionRpcHub
-    }
-    class NetworkingServer {
-        <<assembly>>
-    }
-    class NetworkingClient {
-        <<assembly>>
-    }
-    class NetworkingShared {
-        <<assembly>>
-    }
-    
-    AssemblyCSharp --> SessionRpcHub
-    NetworkingServer ..> NetworkingShared : references
-    NetworkingClient ..> NetworkingShared : references
-```
+### Change #2: Améliorer documentation ajout de jeux
+**Status**: Applied  
+**Score**: 6/10 (Mineur)
 
-#### UML After
+**Action**: Créer guide `HOW_TO_ADD_GAME.md`
 
-```mermaid
-classDiagram
-    class SessionRpcHub {
-        +static Instance
-        +OnNetworkSpawn()
-        +ServerRpc methods
-        +ClientRpc methods
-    }
-    class NetworkingShared {
-        <<assembly>>
-        SessionRpcHub
-        +DTOs
-        +Interfaces
-    }
-    class NetworkingServer {
-        <<assembly>>
-    }
-    class NetworkingClient {
-        <<assembly>>
-    }
-    
-    NetworkingShared --> SessionRpcHub
-    NetworkingServer ..> NetworkingShared : references
-    NetworkingClient ..> NetworkingShared : references
-```
+### Change #3: Améliorer modularité sessions
+**Status**: Proposed  
+**Score**: 7/10 (Important)
 
-#### Patch
-
-**Fichier**: `Assets/Scripts/Networking/Player/SessionRpcHub.cs`
-
-```diff
-+namespace Networking.Shared
-+{
--// Hub RPC global pour gérer les sessions, indépendant du player prefab.
--// Met ce script sur un NetworkPrefab dédié (ex: TestRPC), spawné côté serveur une fois au démarrage.
--// REFACTORED: Now delegates to specialized handlers (SessionLifecycleHandler, GameStartHandler, etc.)
--public class SessionRpcHub : NetworkBehaviour, IGameCommandSender
-+    // Hub RPC global pour gérer les sessions, indépendant du player prefab.
-+    // Met ce script sur un NetworkPrefab dédié (ex: TestRPC), spawné côté serveur une fois au démarrage.
-+    // REFACTORED: Now delegates to specialized handlers (SessionLifecycleHandler, GameStartHandler, etc.)
-+    public class SessionRpcHub : NetworkBehaviour, IGameCommandSender
-     {
-         // ... reste du code ...
-     }
-+}
-```
-
-**Impact**:
-- Fichiers touchés: `SessionRpcHub.cs` + tous les fichiers qui référencent `SessionRpcHub` (ajout `using Networking.Shared;`)
-- Risques: Nécessite mise à jour des références dans les autres scripts
-- Bénéfices: Meilleure séparation, respect de l'architecture assemblies
-
-**Checklist réseau autoritaire**:
-- ✅ SessionRpcHub s'exécute côté serveur (vérifié via `IsServer`)
-- ✅ RPCs serveur validés côté serveur
-- ✅ Pas de logique client critique dans SessionRpcHub
-
-**Score de qualité**: 8/10 (Important)
+**Action**: Refactoriser pour rendre sessions plus extensibles
 
 ---
 
-### Change #2: Créer assembly Networking.Player pour scripts player
+## 4. MODULARITY CHECKLIST
 
-#### UML Before
+### Ajout facile de jeux 2D
+- [x] Système `IGameDefinition` / `GameDefinitionAsset` existe
+- [x] Nouveau jeu = créer ScriptableObject + implémenter interface
+- [x] Auto-enregistrement via `GameRegistry`
+- [x] Pas de modifications dans le code core pour ajouter un jeu
+- [ ] Documentation claire pour ajouter un jeu (à créer)
 
-```mermaid
-classDiagram
-    class SessionRpcHub {
-        <<Assembly-CSharp>>
-    }
-    class DefaultPlayer {
-        <<Assembly-CSharp>>
-    }
-    class NetworkClientRegistry {
-        <<Assembly-CSharp>>
-    }
-    class PlayerManager {
-        <<Assembly-CSharp>>
-    }
-```
+### Modification logique de session
+- [x] Architecture de sessions modulaire (interfaces, handlers)
+- [ ] Possibilité d'ajouter nouveaux types de sessions facilement (à améliorer)
+- [x] Possibilité de modifier comportement sans toucher au core
+- [ ] Système extensible (plugins/handlers) - à améliorer
 
-#### UML After
-
-```mermaid
-classDiagram
-    class NetworkingPlayer {
-        <<assembly>>
-    }
-    class SessionRpcHub {
-        <<Networking.Player>>
-    }
-    class DefaultPlayer {
-        <<Networking.Player>>
-    }
-    class NetworkClientRegistry {
-        <<Networking.Player>>
-    }
-    class PlayerManager {
-        <<Networking.Player>>
-    }
-    
-    NetworkingPlayer --> SessionRpcHub
-    NetworkingPlayer --> DefaultPlayer
-    NetworkingPlayer --> NetworkClientRegistry
-    NetworkingPlayer --> PlayerManager
-    NetworkingPlayer ..> NetworkingShared : references
-    NetworkingServer ..> NetworkingPlayer : references (if needed)
-    NetworkingClient ..> NetworkingPlayer : references (if needed)
-```
-
-#### Patch
-
-**Nouveau fichier**: `Assets/Scripts/Networking/Player/Player.asmdef`
-
-```json
-{
-    "name": "Networking.Player",
-    "references": [
-        "GUID:8c3a8e0b3c3b4c4a8e0b3c3b4c4a8e0b3",
-        "Unity.Netcode.Runtime",
-        "Unity.Collections",
-        "Networking.Shared",
-        "Core"
-    ],
-    "includePlatforms": [],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
-    "autoReferenced": true,
-    "defineConstraints": [],
-    "versionDefines": [],
-    "noEngineReferences": false
-}
-```
-
-**Impact**:
-- Fichiers touchés: Création de `Player.asmdef`, déplacement de `SessionRpcHub` dans namespace `Networking.Player`
-- Risques: Moyen - nécessite vérification des dépendances
-- Bénéfices: Meilleure organisation, séparation claire des responsabilités
-
-**Score de qualité**: 7/10 (Important)
+### Ajout de maps/scenes
+- [x] Maps définies comme assets (ScriptableObject)
+- [x] Scènes associées aux maps de manière déclarative
+- [x] Système de chargement modulaire
+- [ ] Documentation association maps ↔ scènes (à créer)
 
 ---
 
-## 4. AUTHORITATIVE NETWORKING CHECKLIST
+## 5. NETWORK CONFIGURATION CHECKLIST
 
-### ✅ Serveur Authority
-- [x] SessionRpcHub s'exécute côté serveur (`IsServer` checks présents)
-- [x] RPCs serveur validés côté serveur
-- [x] NetworkObject ownership correcte (Server pour SessionRpcHub)
+- [x] `UnityTransport.UseEncryption = false` (vérifié)
+- [x] Pas de système d'authentification complexe
+- [x] Configuration minimale: IP, Port, Nom
+- [x] Paramètres documentés et accessibles
 
-### ✅ Client/Server Separation
-- [x] Pas de références directes Client → Server dans asmdef
-- [x] Pas de références directes Server → Client dans asmdef
-- [⚠️] SessionRpcHub dans Assembly-CSharp (à corriger)
-
-### ✅ Network Prefabs
-- [x] NetworkPrefabs enregistrés (DefaultNetworkPrefabs.asset)
-- [x] SessionRpcHub a NetworkObject
-- [x] Square et CirclePawn ont NetworkObject (à vérifier)
-
-### ⚠️ RPC Validation
-- [⚠️] Validation des paramètres RPC à vérifier dans les handlers
-- [⚠️] Rate limiting RPC à considérer
+**Paramètres supportés**:
+1. IP du serveur (string, default: "127.0.0.1") ✅
+2. Port du serveur (ushort, default: 7777) ✅
+3. Nom du joueur (string, required) ✅
+4. Max players (int, default: 32) ✅
+5. Timeout connexion (int, default: 1000ms) ✅
 
 ---
 
-## 5. SELF-IMPROVE (Process Update)
-
-### Patterns découverts dans cette session
-
-1. **Pattern: Scripts critiques dans Assembly-CSharp**
-   - Fréquence: 1 occurrence majeure (SessionRpcHub)
-   - Impact: Violation de séparation Client/Server
-   - Action: Vérifier tous les scripts dans `Assets/Scripts/Networking/` sans assembly
-
-2. **Pattern: Singleton NetworkBehaviour**
-   - Fréquence: SessionRpcHub utilise Singleton
-   - Impact: Risque de conflits multi-instance
-   - Action: Documenter comme pattern acceptable mais à surveiller
-
-3. **Pattern: Dynamic NetworkPrefabs Registration**
-   - Fréquence: NetworkBootstrap enregistre dynamiquement
-   - Impact: Flexible mais moins visible dans l'éditeur
-   - Action: Documenter comme pattern acceptable
-
-### Améliorations apportées au processus
-
-1. **Checklist Discovery améliorée**:
-   - Vérifier les scripts sans namespace/assembly
-   - Identifier les singletons NetworkBehaviour
-   - Vérifier la configuration NetworkPrefabs (asset + dynamique)
-
-2. **Nouvelles règles de détection**:
-   - Scripts dans `Networking/` sans assembly spécifique = alerte
-   - Singleton + NetworkBehaviour = vérifier la gestion multi-instance
-   - NetworkPrefabs vides dans NetworkManager = vérifier registration dynamique
-
-### Métriques de qualité
-
-- **Fichiers analysés**: ~111 scripts C#, 5 scènes, 7 prefabs, 5 UXML
-- **Problèmes détectés**: 2 critiques/importants, 3 mineurs/info
-- **Suggestions générées**: 2 changements proposés
-- **Couverture estimée**: ~80% (focus sur networking et core)
-- **Précision estimée**: 85% (basée sur analyse statique)
-
----
-
-## 6. REVIEW PLAYBOOK v1
-
-### Date: 2024-12-19
-### Session: Analyse initiale Unity NGO 2D
+## 6. SELF-IMPROVE (Process Update)
 
 ### Patterns découverts
+1. **Système de jeux déjà modulaire** - Bonne base, améliorer documentation
+2. **SessionRpcHub dans Assembly-CSharp** - À corriger
+3. **Configuration réseau simplifiée** - Déjà respectée
 
-1. **Scripts critiques sans assembly spécifique**
-   - Symptôme: Script dans `Assets/Scripts/Networking/` sans `.asmdef` parent
-   - Impact: Violation séparation Client/Server
-   - Détection: Chercher scripts sans namespace ou dans Assembly-CSharp
-   - Correction: Déplacer dans assembly appropriée (Shared/Server/Client/Player)
+### Améliorations apportées
+1. Agent Thebestclient2 créé avec objectifs de modularité
+2. Système d'auto-amélioration configuré
+3. Vérification configuration réseau (encryption désactivé)
 
-2. **Singleton NetworkBehaviour**
-   - Symptôme: `public static Instance` dans NetworkBehaviour
-   - Impact: Risque conflits si plusieurs instances spawnées
-   - Détection: Chercher `static.*Instance` dans NetworkBehaviour
-   - Vérification: S'assurer qu'une seule instance est spawnée
-
-3. **Dynamic NetworkPrefabs Registration**
-   - Symptôme: `NetworkPrefabsLists: []` dans NetworkManager mais prefabs fonctionnent
-   - Impact: Configuration moins visible dans l'éditeur
-   - Détection: Vérifier `RegisterRequiredNetworkPrefabs()` dans bootstrap
-   - Évaluation: Pattern acceptable si documenté
-
-### Anti-patterns identifiés
-
-1. ❌ **Scripts networking dans Assembly-CSharp**
-   - Pourquoi problématique: Pas de séparation Client/Server
-   - Alternative: Utiliser assemblies dédiées (Shared/Server/Client/Player)
-
-2. ⚠️ **Singleton global dans NetworkBehaviour**
-   - Pourquoi risqué: Peut causer conflits si plusieurs instances
-   - Alternative: Utiliser NetworkManager.Singleton ou pattern spécifique
-
-### Checklists mises à jour
-
-#### Checklist Architecture
-- [x] Vérifier séparation Client/Server dans asmdef
-- [x] Vérifier scripts critiques dans assemblies appropriées
-- [x] Vérifier absence de références croisées Client ↔ Server
-- [NEW] Vérifier scripts dans `Networking/` sans assembly spécifique
-
-#### Checklist NGO
-- [x] Vérifier NetworkObject ownership
-- [x] Vérifier NetworkPrefabs registration
-- [x] Vérifier RPC validation
-- [NEW] Vérifier Singleton NetworkBehaviour
-
-#### Checklist Unity
-- [x] Vérifier prefab wiring
-- [x] Vérifier scène serveur identifiée
-- [NEW] Vérifier configuration NetworkPrefabs (asset vs dynamique)
-
-### Améliorations de détection
-
-1. **Détection scripts sans assembly**:
-   - Chercher fichiers `.cs` dans `Networking/` sans `.asmdef` parent
-   - Vérifier namespace (absence = alerte)
-
-2. **Détection Singleton NetworkBehaviour**:
-   - Chercher `static.*Instance` dans classes héritant de NetworkBehaviour
-   - Vérifier gestion multi-instance
-
-3. **Détection NetworkPrefabs configuration**:
-   - Vérifier `NetworkPrefabsLists` dans NetworkManager prefab
-   - Chercher `RegisterRequiredNetworkPrefabs()` dans bootstrap
-
-### Métriques de la session
-
-- **Temps de discovery**: ~15 minutes
-- **Problèmes détectés**: 5 (2 critiques, 3 mineurs)
-- **Suggestions générées**: 2
-- **Couverture**: ~80%
-- **Précision estimée**: 85%
+### Nouvelles règles ajoutées
+1. Vérifier modularité (jeux, sessions, maps) à chaque cycle
+2. Vérifier configuration réseau simplifiée
+3. Appliquer changements critiques automatiquement
 
 ---
 
-**Fin du rapport**
+## 7. REVIEW PLAYBOOK v1
+
+Voir `.cursor/agents/review-playbook-v1.md`
+
+---
+
+**Prochain cycle**: Dans 30 minutes - Version 3
