@@ -6,37 +6,26 @@ Unity multiplayer game framework with **session isolation** - multiple concurren
 ## Architecture
 
 ### Session Isolation System
-- **SessionContainer** (`Assets/Scripts/Core/Games/SessionContainer.cs`): Core isolation boundary. Each session has:
-  - Unique `WorldOffset` (Vector3) for spatial separation
-  - Isolated player registry with authorization checks via `IsAuthorized(clientId)`
-  - Private game state and pawn management
-- Authorization pattern: Always call `container.ValidateAccess(clientId, operation)` before session operations
-- World positioning: All game objects positioned relative to `container.WorldOffset`
+- Core isolation boundary with unique world offset for spatial separation
+- Isolated player registry with authorization checks
+- Private game state and pawn management per session
+- Always validate access before session operations
+- Position all game objects relative to session world offset
 
 ### Game Plugin System
-- Games implement `IGameDefinition` interface or inherit from `GameDefinitionAsset` ScriptableObject
-- Register games: `GameRegistry.Register(gameDefinition)` - auto-initialized on server start
-- Key methods to implement:
-  - `SetupGame(Vector3 worldOffset)` - server-side game setup
-  - `GetSpawnPosition(playerIndex, totalPlayers, worldOffset)` - calculate spawn with offset
-  - `InitializePawn(pawn, playerName, playerIndex, worldOffset)` - configure spawned pawn
-  - `SetupClientVisuals()` - client-side camera/UI setup
-- Example: CircleGameDefinition.cs
+- Games implement IGameDefinition interface or inherit from GameDefinitionAsset ScriptableObject
+- Games auto-register on server start
+- Implement server-side setup, spawn position calculation, pawn initialization, and client-side visuals
 
 ### Networking (Unity Netcode for GameObjects)
-- **ServerRpc**: Client→Server, use `[ServerRpc(RequireOwnership = false)]` for hub calls
-- **ClientRpc**: Server→Client, use `ClientRpcParams` for targeted sends
-- **NetworkVariables**: Server authority with read permission Everyone
-  ```csharp
-  new NetworkVariable<T>(writePerm: NetworkVariableWritePermission.Server)
-  ```
-- RPC Hub: SessionRpcHub.cs - session management RPCs
+- Use ServerRpc for client-to-server calls with RequireOwnership = false
+- Use ClientRpc with ClientRpcParams for targeted server-to-client sends
+- NetworkVariables use server authority with read permission Everyone
+- RPC hub handles session management RPCs
 
 ### Bootstrap Pattern
-- **Server**: ServerBootstrap.cs
-  - Parses command-line args: `-port`, `-maxplayers`
-  - Auto-starts server, spawns SessionRpcHub, creates GameSessionManager
-- **Client**: ClientBootstrap.cs connects via `UnityTransport.SetConnectionData(ip, port)`
+- Server bootstrap parses command-line arguments and auto-starts server
+- Client bootstrap connects via UnityTransport
 
 ## Development Workflows
 
@@ -69,32 +58,26 @@ Tests validate cross-session isolation, authorization, world bounds. See Assets/
 ## Conventions & Patterns
 
 ### Logging
+- Use component name and session ID in log messages
 - Format: `[ComponentName:SessionId]` or `[ComponentName]` for singletons
-- Example: `Debug.Log($"[SessionContainer:{SessionId}] Player joined");`
-- Server startup disables stack traces for Log/Warning (see `ServerBootstrap.InitializeLogging()`)
+- Disable stack traces for Log/Warning on server startup
 
 ### Session Operations
 When adding session functionality:
-1. Add method to `SessionContainer` with authorization check
-2. Add ServerRpc to `SessionRpcHub` calling the container method
-3. Extract `clientId` from `ServerRpcParams.Receive.SenderClientId`
-4. Return errors via `SendSessionErrorClientRpc` with targeted ClientRpcParams
+1. Add method with authorization check
+2. Add ServerRpc calling the method
+3. Extract client ID from ServerRpcParams
+4. Return errors via targeted ClientRpc
 
 ### Adding New Games
-1. Create ScriptableObject inheriting `GameDefinitionAsset`
+1. Create ScriptableObject inheriting GameDefinitionAsset
 2. Implement game-specific logic (setup, spawning, visuals)
-3. Create pawn prefab with `NetworkObject` component
-4. Asset auto-registers via `GameRegistry.Initialize()` on server start
-5. Reference in scene: Add to Resources or serialize in GameRegistry
+3. Create pawn prefab with NetworkObject component
+4. Asset auto-registers on server start
+5. Reference in scene as needed
 
 ### Thread Safety
-`SessionContainer` uses locks: `playerLock`, `pawnLock` for concurrent access. Follow pattern when adding new shared state.
-
-## Key Files Reference
-- **Session isolation logic**: Assets/Scripts/Core/Games/SessionContainer.cs
-- **Game plugin interface**: Assets/Scripts/Core/Games/IGameDefinition.cs
-- **Server startup**: Assets/Scripts/Networking/Server/ServerBootstrap.cs
-- **Architecture diagram**: ARCHITECTURE.md - includes Mermaid class diagram and data flows
+Use locks for concurrent access when adding new shared state. Follow existing patterns.
 
 ## Common Pitfalls
 - ❌ Don't forget `worldOffset` when positioning game objects/pawns
