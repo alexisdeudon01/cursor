@@ -271,3 +271,4 @@ Thumbs.db
 # JetBrains Rider
 .idea/
 *.sln.iml
+.github/KEYS.txt
