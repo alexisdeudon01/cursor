@@ -24,7 +24,31 @@ if git remote get-url origin &> /dev/null; then
         git remote set-url origin "https://github.com/${GITHUB_USERNAME}/cursor.git"
         echo "✅ Remote mis à jour : https://github.com/${GITHUB_USERNAME}/cursor.git"
     else
-        GITHUB_USERNAME=$(echo "$CURRENT_URL" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
+        # Extraire le username depuis HTTPS ou SSH URL
+        if [[ "$CURRENT_URL" =~ https://github.com/([^/]+)/ ]]; then
+            # URL HTTPS: https://github.com/username/repo.git
+            GITHUB_USERNAME="${BASH_REMATCH[1]}"
+        elif [[ "$CURRENT_URL" =~ git@github.com:([^/]+)/ ]]; then
+            # URL SSH: git@github.com:username/repo.git
+            GITHUB_USERNAME="${BASH_REMATCH[1]}"
+        else
+            echo "⚠️  Impossible d'extraire le nom d'utilisateur depuis l'URL : $CURRENT_URL"
+            read -p "Entrez votre nom d'utilisateur GitHub : " GITHUB_USERNAME
+            if [ -z "$GITHUB_USERNAME" ]; then
+                echo "❌ Nom d'utilisateur requis"
+                exit 1
+            fi
+        fi
+        
+        if [ -z "$GITHUB_USERNAME" ]; then
+            echo "⚠️  Impossible d'extraire le nom d'utilisateur"
+            read -p "Entrez votre nom d'utilisateur GitHub : " GITHUB_USERNAME
+            if [ -z "$GITHUB_USERNAME" ]; then
+                echo "❌ Nom d'utilisateur requis"
+                exit 1
+            fi
+        fi
+        
         echo "✅ Utilisation du remote existant pour : $GITHUB_USERNAME"
     fi
 else

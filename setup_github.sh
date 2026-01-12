@@ -65,9 +65,24 @@ echo ""
 echo "📝 Ajout des fichiers..."
 git add .
 
-# Faire un commit initial
-echo "💾 Création du commit initial..."
-git commit -m "Initial commit: Unity multiplayer game project"
+# Vérifier s'il y a des changements à commiter
+if git diff --cached --quiet && git diff --quiet; then
+    echo "⚠️  Aucun changement à commiter. Vérification des commits existants..."
+    if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+        echo "❌ Aucun commit trouvé et aucun changement à commiter"
+        echo "Ajoutez des fichiers au dépôt avant de continuer"
+        exit 1
+    fi
+    echo "✅ Des commits existent déjà, passage au push..."
+else
+    # Faire un commit initial
+    echo "💾 Création du commit initial..."
+    if ! git commit -m "Initial commit: Unity multiplayer game project"; then
+        echo "❌ Erreur lors de la création du commit"
+        exit 1
+    fi
+    echo "✅ Commit créé avec succès"
+fi
 
 # Pousser vers GitHub
 echo "🚀 Push vers GitHub..."
