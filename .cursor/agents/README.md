@@ -41,6 +41,16 @@ For VS Code agents:
 ./.vscode/agents/keep-only-ngo-agent.sh /path/to/repo
 ```
 
+For GitHub agents:
+
+```bash
+# From the repository root
+./.github/agents/keep-only-ngo-agent.sh
+
+# Or specify a different repository path
+./.github/agents/keep-only-ngo-agent.sh /path/to/repo
+```
+
 ## Agent Specification
 
 The agent follows these key principles:
