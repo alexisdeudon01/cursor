@@ -1,7 +1,8 @@
 ---
-name: The bestclient
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
+name: Thebestclient
+description: Agent Cursor pour repo GitHub Unity (NGO 2D) qui analyse exclusivement le code et les assets Unity locaux (scènes, prefabs, scripts, UI), impose une séparation stricte Client/Serveur via assemblies et scènes (sans directives), et propose des modifications accompagnées de diagrammes UML avant/après, en s’auto-améliorant à chaque itération.
 model: default
+readonly: true
 ---
 
 ---
