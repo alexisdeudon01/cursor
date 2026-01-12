@@ -1,0 +1,46 @@
+---
+title: SessionContainer - State Machine
+---
+stateDiagram-v2
+    [*] --> Lobby: CreateSession()
+    
+    Lobby --> Lobby: AddPlayer() / RemovePlayer()
+    Lobby --> Starting: StartGame() [minPlayers met]
+    Lobby --> Ended: Timeout / AllPlayersLeft
+    
+    Starting --> InGame: InitComplete
+    Starting --> Ended: InitFailed
+    
+    InGame --> InGame: GameTick
+    InGame --> InGame: PlayerAction
+    InGame --> Ended: GameOver / HostDisconnect
+    
+    Ended --> [*]: Dispose()
+    
+    note right of Lobby
+        État initial
+        - Joueurs rejoignent/quittent
+        - Authorization des clients
+        - Attente min players
+    end note
+    
+    note right of Starting
+        Phase de transition
+        - Spawn des pawns
+        - Init game logic
+        - Position offset appliqué
+    end note
+    
+    note right of InGame
+        Jeu en cours
+        - Validation continue
+        - RPC autorisés
+        - Security checks
+    end note
+    
+    note left of Ended
+        Nettoyage
+        - Revoke all clients
+        - Destroy pawns
+        - Libérer ressources
+    end note

@@ -1,0 +1,620 @@
+.lobby-root {
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    padding: 24px;
+    background-color: rgb(20, 22, 28);
+    color: rgb(230, 235, 240);
+    -unity-font-definition: url("project://database/Assets/TextMesh%20Pro/Fonts/LiberationSans.ttf?fileID=12800000&guid=e3265ab4bf004d28a9537516768c1c75&type=3#LiberationSans");
+}
+
+.header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.title-container {
+    flex-direction: row;
+    align-items: center;
+}
+
+.title-icon {
+    font-size: 18px;
+    margin-right: 8px;
+}
+
+.title {
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.status-container {
+    flex-direction: row;
+    align-items: center;
+}
+
+.connection-status {
+    font-size: 13px;
+    color: rgb(160, 210, 170);
+}
+
+.view-tabs {
+    flex-direction: row;
+    margin-bottom: 12px;
+}
+
+.tab-btn {
+    flex-grow: 1;
+    height: 36px;
+    background-color: rgb(34, 38, 48);
+    color: rgb(210, 220, 230);
+    border-width: 1px;
+    border-color: rgb(70, 78, 92);
+    border-right-width: 0px;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.tab-btn-last {
+    border-right-width: 1px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.tab-btn.active {
+    background-color: rgb(70, 120, 190);
+    color: rgb(255, 255, 255);
+}
+
+.tab-btn:hover {
+    background-color: rgb(44, 50, 64);
+}
+
+.main-content {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-grow: 1;
+    margin-bottom: 12px;
+}
+
+.panel {
+    background-color: rgb(30, 34, 44);
+    border-width: 1px;
+    border-color: rgb(70, 78, 92);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.sessions-panel {
+    flex-grow: 2;
+    flex-basis: 0;
+    min-width: 340px;
+    margin-right: 12px;
+    margin-bottom: 12px;
+    flex-direction: column;
+}
+
+.log-panel {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 280px;
+    margin-bottom: 12px;
+    flex-direction: column;
+}
+
+.panel-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+.sessions-scroll {
+    flex-grow: 1;
+    min-height: 180px;
+    border-width: 1px;
+    border-color: rgb(60, 68, 82);
+    border-radius: 10px;
+    background-color: rgb(24, 26, 34);
+    margin-bottom: 12px;
+}
+
+.sessions-list {
+    flex-direction: column;
+    padding: 8px;
+}
+
+.session-item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    background-color: rgb(40, 45, 56);
+}
+
+.session-item.selected {
+    border-left-width: 3px;
+    border-left-color: rgb(90, 150, 220);
+}
+
+.session-name {
+    font-size: 14px;
+    color: rgb(235, 240, 245);
+    flex-grow: 1;
+}
+
+.session-players {
+    font-size: 12px;
+    color: rgb(170, 180, 190);
+    margin-right: 8px;
+}
+
+.join-btn {
+    height: 28px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(70, 120, 190);
+    color: rgb(255, 255, 255);
+    border-radius: 6px;
+    border-width: 0px;
+}
+
+.join-btn:hover {
+    background-color: rgb(85, 135, 205);
+}
+
+.create-session {
+    background-color: rgb(26, 30, 40);
+    border-width: 1px;
+    border-color: rgb(70, 78, 92);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.create-session-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+.session-form {
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.session-name-field {
+    background-color: rgb(240, 240, 240);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(90, 110, 140);
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    height: 34px;
+}
+
+.session-name-field .unity-text-field__label {
+    color: rgb(120, 130, 145);
+}
+
+.session-name-field > #unity-text-input {
+    color: rgb(25, 25, 25);
+    background-color: transparent;
+}
+
+.creation-hint {
+    background-color: rgb(30, 36, 46);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+.hint-text {
+    font-size: 12px;
+    color: rgb(160, 175, 190);
+}
+
+.create-btn {
+    height: 34px;
+    background-color: rgb(80, 140, 200);
+    color: rgb(255, 255, 255);
+    border-radius: 8px;
+    border-width: 0px;
+}
+
+.create-btn:hover {
+    background-color: rgb(95, 155, 215);
+}
+
+.refresh-btn {
+    height: 32px;
+    background-color: rgb(40, 46, 60);
+    color: rgb(210, 220, 230);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(70, 78, 92);
+}
+
+.log-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.log-scroll {
+    flex-grow: 1;
+    min-height: 200px;
+    border-width: 1px;
+    border-color: rgb(60, 68, 82);
+    border-radius: 10px;
+    background-color: rgb(24, 26, 34);
+}
+
+.log-container {
+    flex-direction: column;
+    padding: 8px;
+}
+
+.log-entry {
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.log-entry-log {
+    color: rgb(200, 205, 215);
+    background-color: rgba(100, 110, 130, 0.15);
+}
+
+.log-entry-warning {
+    color: rgb(255, 200, 120);
+    background-color: rgba(255, 200, 120, 0.12);
+    border-left-width: 3px;
+    border-left-color: rgb(255, 200, 120);
+}
+
+.log-entry-error {
+    color: rgb(255, 120, 120);
+    background-color: rgba(255, 120, 120, 0.12);
+    border-left-width: 3px;
+    border-left-color: rgb(255, 120, 120);
+}
+
+.clear-logs-btn {
+    height: 28px;
+    background-color: rgb(50, 56, 70);
+    color: rgb(220, 225, 235);
+    border-radius: 6px;
+    border-width: 0px;
+}
+
+.footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.disconnect-btn {
+    height: 34px;
+    background-color: rgb(120, 60, 60);
+    color: rgb(255, 255, 255);
+    border-radius: 8px;
+    border-width: 0px;
+}
+
+.status-label {
+    font-size: 12px;
+    color: rgb(170, 180, 190);
+}
+
+.empty-message {
+    font-size: 13px;
+    color: rgb(160, 170, 185);
+    padding: 8px;
+}
+
+.popup-overlay {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.55);
+    -unity-font-definition: url("project://database/Assets/TextMesh%20Pro/Fonts/LiberationSans.ttf?fileID=12800000&guid=e3265ab4bf004d28a9537516768c1c75&type=3#LiberationSans");
+    z-index: 9;
+}
+
+.session-popup {
+    width: 90%;
+    max-width: 980px;
+    background-color: rgb(28, 32, 42);
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgb(70, 78, 92);
+    padding: 18px;
+    flex-direction: column;
+}
+
+.popup-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.popup-title {
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+
+.popup-close-btn {
+    height: 28px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(48, 54, 68);
+    color: rgb(220, 225, 235);
+    border-radius: 8px;
+    border-width: 0px;
+}
+
+.popup-info {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.game-selection-container {
+    flex-grow: 1;
+    min-width: 240px;
+    margin-right: 12px;
+    margin-bottom: 12px;
+}
+
+.popup-config-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+}
+
+.popup-game-dropdown {
+    background-color: rgb(240, 240, 240);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(90, 110, 140);
+    padding: 6px 8px;
+}
+
+.popup-game-dropdown .unity-base-field__label {
+    color: rgb(120, 130, 145);
+}
+
+.popup-game-dropdown > #unity-text-input {
+    color: rgb(25, 25, 25);
+}
+
+.players-container {
+    flex-direction: column;
+    flex-grow: 2;
+    min-width: 280px;
+    margin-bottom: 12px;
+}
+
+.popup-players-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+}
+
+.popup-players-scroll {
+    min-height: 180px;
+    max-height: 260px;
+    border-width: 1px;
+    border-color: rgb(60, 68, 82);
+    border-radius: 10px;
+    background-color: rgb(24, 26, 34);
+}
+
+.popup-players-list {
+    flex-direction: column;
+    padding: 8px;
+}
+
+.popup-player-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    background-color: rgba(40, 45, 56, 0.8);
+}
+
+.popup-player-item-ready {
+    background-color: rgba(40, 80, 50, 0.45);
+}
+
+.popup-player-item-local {
+    border-left-width: 3px;
+    border-left-color: rgb(90, 150, 220);
+}
+
+.player-status-icon {
+    font-size: 14px;
+    margin-right: 8px;
+    color: rgb(160, 170, 185);
+}
+
+.player-status-icon.ready {
+    color: rgb(80, 200, 120);
+}
+
+.popup-player-name {
+    flex-grow: 1;
+    font-size: 14px;
+    color: rgb(235, 240, 245);
+}
+
+.popup-player-name.local {
+    -unity-font-style: bold;
+}
+
+.host-badge {
+    font-size: 14px;
+    margin-left: 4px;
+}
+
+.badges-container {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ready-status-container {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.popup-ready-title {
+    font-size: 13px;
+    color: rgb(170, 180, 190);
+}
+
+.ready-progress-container {
+    flex-direction: column;
+    flex-grow: 1;
+    margin-left: 12px;
+}
+
+.popup-ready-count {
+    font-size: 12px;
+    color: rgb(200, 210, 220);
+    margin-bottom: 4px;
+}
+
+.ready-progress-bar {
+    height: 8px;
+    border-radius: 6px;
+    background-color: rgb(50, 56, 70);
+    overflow: hidden;
+}
+
+.ready-progress-fill {
+    height: 100%;
+    background-color: rgb(80, 200, 120);
+}
+
+.popup-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+
+.popup-ready-btn {
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(60, 110, 80);
+    color: rgb(255, 255, 255);
+    border-radius: 8px;
+    border-width: 0px;
+    margin-right: 8px;
+}
+
+.popup-start-btn {
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(70, 120, 190);
+    color: rgb(255, 255, 255);
+    border-radius: 8px;
+    border-width: 0px;
+    margin-right: 8px;
+}
+
+.popup-leave-btn {
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgb(120, 60, 60);
+    color: rgb(255, 255, 255);
+    border-radius: 8px;
+    border-width: 0px;
+}
+
+.name-entry-panel {
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(12, 14, 18, 0.96);
+    -unity-font-definition: url("project://database/Assets/TextMesh%20Pro/Fonts/LiberationSans.ttf?fileID=12800000&guid=e3265ab4bf004d28a9537516768c1c75&type=3#LiberationSans");
+    z-index: 10;
+}
+
+.name-entry-container {
+    width: 90%;
+    max-width: 460px;
+    background-color: rgb(30, 34, 44);
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgb(70, 78, 92);
+    padding: 24px;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.name-entry-title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+}
+
+.name-entry-subtitle {
+    font-size: 13px;
+    color: rgb(170, 180, 190);
+    margin-bottom: 14px;
+}
+
+.player-name-field {
+    background-color: rgb(240, 240, 240);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(90, 110, 140);
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    height: 36px;
+}
+
+.player-name-field > #unity-text-input {
+    color: rgb(25, 25, 25);
+    background-color: transparent;
+}
+
+.validation-error {
+    font-size: 12px;
+    color: rgb(255, 120, 120);
+    margin-bottom: 8px;
+    display: none;
+}
+
+.confirm-name-btn {
+    height: 36px;
+    background-color: rgb(80, 140, 200);
+    color: rgb(255, 255, 255);
+    border-radius: 8px;
+    border-width: 0px;
+}
