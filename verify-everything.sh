@@ -257,10 +257,17 @@ mkdir -p .cursor/agents
 mkdir -p .github/scripts
 mkdir -p .github/workflows
 
-# Si agent manquant, créer un fichier de base
+# Si agent manquant, télécharger depuis GitHub ou créer de base
 if [ ! -f ".cursor/agents/thebestclient5.md" ]; then
-    echo "   Création thebestclient5.md de base..."
-    cat > .cursor/agents/thebestclient5.md << 'EOF'
+    echo "   Tentative de récupération thebestclient5.md..."
+    # Essayer plusieurs méthodes
+    if git show origin/dev:.cursor/agents/thebestclient5.md > .cursor/agents/thebestclient5.md 2>/dev/null; then
+        echo -e "${GREEN}   ✅ Récupéré depuis Git${NC}"
+    elif curl -s -f https://raw.githubusercontent.com/alexisdeudon01/cursor/dev/.cursor/agents/thebestclient5.md > .cursor/agents/thebestclient5.md 2>/dev/null; then
+        echo -e "${GREEN}   ✅ Téléchargé depuis GitHub${NC}"
+    else
+        echo "   Création thebestclient5.md de base..."
+        cat > .cursor/agents/thebestclient5.md << 'AGENT_EOF'
 ---
 name: Thebestclient5
 description: Agent AI v5 - 50% LLM jeux 2D + 50% amélioration code
@@ -270,16 +277,36 @@ readonly: false
 
 # Agent Thebestclient5
 
-Voir le fichier complet sur GitHub: https://github.com/alexisdeudon01/cursor/blob/dev/.cursor/agents/thebestclient5.md
-EOF
-    echo -e "${GREEN}   ✅ Fichier de base créé${NC}"
+Agent d'amélioration continue avec entraînement LLM pour jeux 2D.
+Voir le fichier complet sur GitHub une fois le repo synchronisé.
+AGENT_EOF
+        echo -e "${YELLOW}   ⚠️  Fichier de base créé (télécharger depuis GitHub plus tard)${NC}"
+    fi
 fi
 
-# Si scripts manquants, les créer
+# Si scripts manquants, les créer localement
 if [ ! -f "setup-complete.sh" ]; then
-    echo "   Téléchargement setup-complete.sh depuis GitHub..."
-    curl -s https://raw.githubusercontent.com/alexisdeudon01/cursor/dev/setup-complete.sh > setup-complete.sh 2>/dev/null || echo "   ⚠️  Impossible de télécharger"
-    chmod +x setup-complete.sh 2>/dev/null || true
+    echo "   Création setup-complete.sh localement..."
+    cat > setup-complete.sh << 'SETUP_EOF'
+#!/bin/bash
+# Script complet pour setup la branche dev avec tout le nécessaire
+set -e
+echo "🚀 Setup complet de la branche dev..."
+mkdir -p .github
+cat > .github/KEYS.txt << 'EOF'
+# ⚠️ FICHIER LOCAL - NE JAMAIS COMMITER
+ANTHROPIC_API_KEY=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
+SSH_PRIVATE_KEY=b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABBrWlGBzGysO3xsV6UFaOjNAAAAGAAAAAEAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIGmC9hs4sioYyFFC9C8t6qBmk3jBgTFySFYV7DkZAEZqAAAAoJkqxhUPrbIS6wxVa64SV89zuHnm3vpSZlPqMC53ivTQj2lHzOVaYHWrdeKup6GYPxqjx4S5zN9JzAIA9ZDw/Tk2S8JC72iouJ/SaSFHrRLwFrsafkiRX35q0IccCHANZKtlSdcb52ZGRpzSykxw9LRno+FjnfCviM+imkrQiIOlLRnl+FW3ZXCkJ+/D2Oj9bOXBA8r+/k+FB6Zk/59BJaI=
+SSH_PUBLIC_KEY=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGmC9hs4sioYyFFC9C8t6qBmk3jBgTFySFYV7DkZAEZq alexisdeudon01@gmail.com
+SSH_PASSPHRASE=alexis
+EOF
+if ! grep -q "KEYS.txt" .gitignore 2>/dev/null; then
+    echo ".github/KEYS.txt" >> .gitignore
+fi
+echo "✅ Setup terminé!"
+SETUP_EOF
+    chmod +x setup-complete.sh
+    echo -e "${GREEN}   ✅ setup-complete.sh créé${NC}"
 fi
 
 echo ""
