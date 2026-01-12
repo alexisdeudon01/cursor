@@ -1,0 +1,210 @@
+CURSOR - Structure Complète du Projet
+=====================================
+
+cursor/
+│
+├── 📄 README.md                          # Documentation principale (French)
+├── 📄 QUICK_REFERENCE.md                # Référence API rapide (French)
+├── 📄 ARCHITECTURE.md                   # Documentation technique détaillée (French)
+├── 📄 BUILD_INSTRUCTIONS.md             # Instructions de build (French)
+├── 📄 PROJECT_SUMMARY.md                # Résumé du projet (French)
+├── 📄 .gitignore                        # Fichiers ignorés par Git (Unity template)
+│
+├── 📁 Assets/
+│   │
+│   ├── 📁 Scenes/                       # Scènes Unity
+│   │   ├── 🎮 MainMenu.unity            # Scène menu principal (CLIENT)
+│   │   ├── 🎮 Gameplay.unity            # Scène de jeu (CLIENT)
+│   │   ├── 🎮 Settings.unity            # Scène paramètres (CLIENT)
+│   │   └── 🎮 ServerScene.unity         # Scène serveur dédié (SERVER)
+│   │
+│   └── 📁 Scripts/
+│       │
+│       ├── 📁 Client/                   # Code CLIENT uniquement
+│       │   ├── 💻 ClientInitializer.cs          # Initialisation client
+│       │   ├── 💻 ClientNetworkManager.cs       # Gestion réseau client
+│       │   ├── 💻 SceneController.cs            # Contrôle des scènes
+│       │   └── 📦 CursorClient.asmdef           # Assembly Definition client
+│       │
+│       ├── 📁 Server/                   # Code SERVER uniquement
+│       │   ├── 🖥️ ServerInitializer.cs          # Initialisation serveur
+│       │   ├── 🖥️ ServerAuthManager.cs          # Gestionnaire d'autorisation
+│       │   ├── 🖥️ AuthorizedDataManager.cs     # Gestion données orientées
+│       │   ├── 🖥️ ServerConfig.cs               # Configuration serveur
+│       │   └── 📦 CursorServer.asmdef           # Assembly Definition serveur
+│       │
+│       ├── 📁 Shared/                   # Code PARTAGÉ
+│       │   ├── 🔄 NetworkProtocol.cs            # Protocole réseau
+│       │   ├── 🔄 ExampleUsage.cs               # Exemples d'utilisation
+│       │   └── 📦 CursorShared.asmdef           # Assembly Definition partagé
+│       │
+│       └── 📁 Editor/                   # Outils UNITY EDITOR
+│           ├── 🔧 BuildScript.cs                # Script de build automatisé
+│           └── 📦 CursorEditor.asmdef           # Assembly Definition editor
+│
+├── 📁 ProjectSettings/                  # Configuration Unity
+│   ├── ⚙️ ProjectSettings.asset                # Paramètres projet Unity
+│   ├── ⚙️ EditorBuildSettings.asset            # Configuration des scènes de build
+│   ├── ⚙️ GraphicsSettings.asset               # Paramètres graphiques
+│   ├── ⚙️ TagManager.asset                     # Tags et layers Unity
+│   └── ⚙️ ProjectVersion.txt                   # Version Unity du projet
+│
+└── 📁 Builds/                           # Dossier généré par le build (non versionné)
+    │
+    ├── 📁 Client/                       # BUILD CLIENT
+    │   ├── 🎮 CursorClient.exe                  # Exécutable client
+    │   ├── 📁 CursorClient_Data/                # Données Unity client
+    │   ├── 📁 MonoBleedingEdge/                 # Runtime Mono
+    │   └── 📄 UnityPlayer.dll                   # Player Unity
+    │
+    └── 📁 Server/                       # BUILD SERVER
+        ├── 🖥️ CursorServer.exe                  # Exécutable serveur
+        ├── 📁 CursorServer_Data/                # Données Unity serveur
+        ├── 📁 MonoBleedingEdge/                 # Runtime Mono
+        └── 📄 UnityPlayer.dll                   # Player Unity
+
+
+STATISTIQUES DU PROJET
+======================
+
+Scripts C#:              10 fichiers
+  - Client:               3 scripts
+  - Server:               4 scripts
+  - Shared:               2 scripts
+  - Editor:               1 script
+
+Assembly Definitions:     4 modules
+  - CursorClient.asmdef
+  - CursorServer.asmdef
+  - CursorShared.asmdef
+  - CursorEditor.asmdef
+
+Scènes Unity:             4 scènes
+  - Client:               3 scènes (MainMenu, Gameplay, Settings)
+  - Server:               1 scène (ServerScene)
+
+Documentation:            5 documents
+  - README.md
+  - QUICK_REFERENCE.md
+  - ARCHITECTURE.md
+  - BUILD_INSTRUCTIONS.md
+  - PROJECT_SUMMARY.md
+
+Configuration:            5 fichiers
+  - ProjectSettings.asset
+  - EditorBuildSettings.asset
+  - GraphicsSettings.asset
+  - TagManager.asset
+  - ProjectVersion.txt
+
+Builds générés:           2 exécutables
+  - Client build (CursorClient.exe)
+  - Server build (CursorServer.exe)
+
+
+LÉGENDE DES ICÔNES
+==================
+
+📄 Document / Fichier texte
+📁 Dossier
+🎮 Scène client Unity
+🖥️ Script serveur
+💻 Script client
+🔄 Script partagé
+🔧 Outil / Script editor
+📦 Assembly Definition
+⚙️ Fichier de configuration
+
+
+FLUX DE TRAVAIL
+===============
+
+1. Développement:
+   - Modifier les scripts dans Assets/Scripts/
+   - Tester en mode éditeur Unity
+   - Vérifier la compilation
+
+2. Build:
+   - Unity Menu > Cursor > Build Both
+   - Génère Builds/Client/ et Builds/Server/
+
+3. Test:
+   - Lancer Builds/Server/CursorServer.exe
+   - Lancer Builds/Client/CursorClient.exe
+   - Vérifier la connexion et l'autorisation
+
+4. Distribution:
+   - Package Builds/Client/ pour utilisateurs
+   - Package Builds/Server/ pour serveur dédié
+
+
+COMMANDES UNITY MENU
+====================
+
+Cursor > Build Client          # Build uniquement client
+Cursor > Build Server          # Build uniquement serveur
+Cursor > Build Both            # Build client + serveur (RECOMMANDÉ)
+Cursor > Clean Builds          # Nettoie le dossier Builds/
+
+
+POINTS D'ENTRÉE
+===============
+
+Client:
+  - Scene: Assets/Scenes/MainMenu.unity
+  - Script: Assets/Scripts/Client/ClientInitializer.cs
+  - Manager: ClientNetworkManager (Singleton)
+
+Server:
+  - Scene: Assets/Scenes/ServerScene.unity
+  - Script: Assets/Scripts/Server/ServerInitializer.cs
+  - Managers: ServerAuthManager, AuthorizedDataManager (Singletons)
+
+
+CONFIGURATION
+=============
+
+Port serveur:              7777 (configurable)
+Max connexions:            100 (configurable)
+Token expiration:          3600 secondes (configurable)
+Intervalle sync:           100 ms (configurable)
+Taille paquet max:         4096 bytes (configurable)
+
+Configuration via:         Assets/Scripts/Server/ServerConfig.cs
+Type:                      ScriptableObject
+
+
+REQUIREMENTS SATISFAITS
+=======================
+
+✅ Serveur entièrement autorisé (Fully authorized server)
+✅ Deux builds distincts (Two separate builds)
+✅ Build client avec plusieurs scènes (Client with multiple scenes)
+✅ Build serveur orienté données (Server fully authorize data oriented)
+✅ Deux fichiers générés (Two generated files)
+✅ Implémenté dans la même version Cursor (Same Cursor version)
+
+
+TECHNOLOGIES UTILISÉES
+=====================
+
+- Unity 2020.3 LTS
+- C# .NET Framework 4.x
+- Unity ScriptableObjects
+- Unity Assembly Definitions
+- Unity Build Pipeline API
+- Singleton Pattern
+- Event-Driven Architecture
+- Data-Oriented Design
+
+
+AUTEUR & LICENCE
+================
+
+Projet:        Cursor
+Version:       0.1.0
+Date:          Janvier 2026
+Repository:    github.com/alexisdeudon01/cursor
+Auteur:        Cursor Development Team
+Licence:       MIT
+
