@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using Core.Games;
 using Core.StateSync;
+using Networking.Shared;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;

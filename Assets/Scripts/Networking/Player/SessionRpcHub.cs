@@ -10,10 +10,12 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Hub RPC global pour gérer les sessions, indépendant du player prefab.
-// Met ce script sur un NetworkPrefab dédié (ex: TestRPC), spawné côté serveur une fois au démarrage.
-// REFACTORED: Now delegates to specialized handlers (SessionLifecycleHandler, GameStartHandler, etc.)
-public class SessionRpcHub : NetworkBehaviour, IGameCommandSender
+namespace Networking.Shared
+{
+    // Hub RPC global pour gérer les sessions, indépendant du player prefab.
+    // Met ce script sur un NetworkPrefab dédié (ex: TestRPC), spawné côté serveur une fois au démarrage.
+    // REFACTORED: Now delegates to specialized handlers (SessionLifecycleHandler, GameStartHandler, etc.)
+    public class SessionRpcHub : NetworkBehaviour, IGameCommandSender
 {
     public static SessionRpcHub Instance { get; private set; }
 
@@ -319,4 +321,5 @@ public void SendGameCommandBatchClientRpc(GameCommandDto[] commands, ClientRpcPa
     }
 
     // NOTE: legacy pawn sync RPCs removed (pawns are not NetworkObjects in Option 1).
+    }
 }

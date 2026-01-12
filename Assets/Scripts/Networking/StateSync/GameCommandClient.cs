@@ -1,4 +1,5 @@
 using Core.StateSync;
+using Networking.Shared;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;

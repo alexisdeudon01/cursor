@@ -1,0 +1,59 @@
+name: Auto-Improve Project (Thebestclient)
+
+on:
+  schedule:
+    # Exécute toutes les 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Permet de lancer manuellement
+  push:
+    branches:
+      - dev
+    paths:
+      - '.cursor/agents/**'
+      - 'Assets/Scripts/**'
+      - 'Assets/Scenes/**'
+      - 'Assets/Prefabs/**'
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install -q requests
+          
+      - name: Run Auto-Improve Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python .github/scripts/auto-improve.py
+          
+      - name: Commit and Push Changes
+        if: github.event_name != 'pull_request'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --staged --quiet || git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
+          git push origin dev || echo "No changes to push"
