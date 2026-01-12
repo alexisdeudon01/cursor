@@ -785,11 +785,11 @@ PlayerSettings:
     Standalone: 1
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: 9edd4bd3-c5a5-4454-928b-ad71369cf829
+  cloudProjectId: 
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Lala - Copie
-  organizationId: radjan09
+  projectName: 
+  organizationId: 
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
