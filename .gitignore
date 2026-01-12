@@ -58,8 +58,8 @@ html/
 ################################
 ########### VS CODE ############
 ################################
-.vscode/settings.json
-.vscode/c_cpp_properties.json
+# VS Code complètement ignoré
+.vscode/
 *.code-workspace
 .history
 
@@ -253,12 +253,8 @@ Thumbs.db
 # Rider
 .idea/
 
-# Visual Studio Code
+# Visual Studio Code (complètement ignoré)
 .vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 *.code-workspace
 
 # Visual Studio configuration files
