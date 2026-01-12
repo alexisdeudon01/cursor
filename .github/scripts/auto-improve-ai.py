@@ -267,13 +267,61 @@ def test_network_connection():
     
     return all(tests.values())
 
+def train_llm_games():
+    """Entraîne le LLM pour jeux 2D (50% du temps)."""
+    print("🎮 Entraînement LLM pour jeux 2D (50% du temps)...")
+    try:
+        result = subprocess.run(
+            ["python3", ".github/scripts/train-llm-games.py"],
+            capture_output=True,
+            text=True,
+            timeout=900  # 15 minutes max
+        )
+        if result.returncode == 0:
+            print("✅ Entraînement LLM terminé")
+            if result.stdout:
+                print(result.stdout)
+        else:
+            print(f"⚠️ Erreur entraînement LLM: {result.stderr}")
+    except Exception as e:
+        print(f"⚠️ Erreur entraînement LLM: {e}")
+
 def main():
     """Fonction principale."""
     print("🚀 Démarrage du cycle d'amélioration avec IA...")
+    print("⏱️  Répartition: 50% LLM jeux 2D + 50% amélioration code")
+    print("=" * 60)
+    
+    # Vérifier accès API
+    print("🔍 Vérification accès...")
+    try:
+        result = subprocess.run(
+            ["python3", ".github/scripts/check-api-access.py"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.stdout:
+            print(result.stdout)
+        if result.returncode != 0:
+            print("⚠️ Certains accès ont échoué")
+    except Exception as e:
+        print(f"⚠️ Erreur vérification accès: {e}")
     
     if not ANTHROPIC_API_KEY:
         print("⚠️ Mode simulation: ANTHROPIC_API_KEY non configuré")
         print("💡 Pour activer l'IA, ajoutez ANTHROPIC_API_KEY dans les secrets GitHub")
+    
+    # ========== 50% DU TEMPS: ENTRAÎNEMENT LLM ==========
+    print("")
+    print("🎮 PHASE 1: Entraînement LLM pour jeux 2D (50% du temps)")
+    print("-" * 60)
+    train_llm_games()
+    
+    # ========== 50% DU TEMPS: AMÉLIORATION CODE ==========
+    print("")
+    print("🔧 PHASE 2: Amélioration code (50% du temps)")
+    print("-" * 60)
     
     # Tests de connexion
     network_ok = test_network_connection()
@@ -286,6 +334,9 @@ def main():
     
     print(f"📊 Version actuelle: {current_version}")
     print(f"📊 Prochaine version: {next_version}")
+    
+    # Recherche patterns jeux 2D
+    research_2d_game_patterns()
     
     # Générer les diagrammes UML
     generate_uml_diagrams(next_version)
@@ -307,7 +358,12 @@ def main():
         print(f"🔧 Application de {len(critical_improvements)} amélioration(s) critique(s)...")
         apply_improvements(critical_improvements)
     
-    print(f"\n✨ Cycle terminé! Prochaine version: thebestclient{next_version}")
+    # Tests de compilation
+    test_compilation()
+    
+    print("")
+    print("=" * 60)
+    print(f"✨ Cycle terminé! Prochaine version: thebestclient{next_version}")
     print("📋 Les changements seront commités automatiquement par GitHub Actions")
 
 if __name__ == "__main__":
