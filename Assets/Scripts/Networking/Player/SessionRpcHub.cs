@@ -128,80 +128,80 @@ public class SessionRpcHub : NetworkBehaviour, IGameCommandSender
     //  SESSIONS
     // ============================================================
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void CreateSessionServerRpc(string sessionName, string playerName, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void CreateSessionServerRpc(string sessionName, string playerName, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         lifecycleHandler.HandleCreateSession(sessionName, playerName, sender);
     }
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void JoinSessionServerRpc(string sessionName, string playerName, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void JoinSessionServerRpc(string sessionName, string playerName, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         lifecycleHandler.HandleJoinSession(sessionName, playerName, sender);
     }
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void LeaveSessionServerRpc(string sessionName, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void LeaveSessionServerRpc(string sessionName, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         lifecycleHandler.HandleLeaveSession(sessionName, sender);
     }
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void SetReadyServerRpc(string sessionName, bool ready, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void SetReadyServerRpc(string sessionName, bool ready, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         lifecycleHandler.HandleSetReady(sessionName, ready, sender);
     }
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void RequestSessionDetailsServerRpc(string sessionName, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestSessionDetailsServerRpc(string sessionName, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         queryHandler.HandleRequestSessionDetails(sessionName, sender);
     }
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void StartGameServerRpc(string sessionName, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void StartGameServerRpc(string sessionName, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var clientId = rpcParams.Receive.SenderClientId;
+        var clientId = serverRpcParams.Receive.SenderClientId;
         gameStartHandler.HandleStartGame(sessionName, clientId);
     }
 
     /// <summary>
     /// [ServerRpc] Set the game type for a session.
     /// </summary>
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void SetGameTypeServerRpc(string sessionName, string gameId, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void SetGameTypeServerRpc(string sessionName, string gameId, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         gameStartHandler.HandleSetGameType(sessionName, gameId, sender);
     }
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    [ServerRpc(RequireOwnership = false)]
     public void RequestSessionsServerRpc()
     {
         if (!IsServer)
@@ -256,13 +256,13 @@ public void SendGameCommandBatchClientRpc(GameCommandDto[] commands, ClientRpcPa
 }
 
 
-    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void SendGameCommandServerRpc(GameCommandDto command, RpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void SendGameCommandServerRpc(GameCommandDto command, ServerRpcParams serverRpcParams = default)
     {
         if (!IsServer)
             return;
 
-        var sender = rpcParams.Receive.SenderClientId;
+        var sender = serverRpcParams.Receive.SenderClientId;
         movementHandler.HandleCommand(command, sender);
     }
 
