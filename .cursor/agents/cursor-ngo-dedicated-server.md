@@ -1,6 +1,6 @@
 ---
 name: "Unity NGO Dedicated Server (2D) - Client/Server Dual Build"
-description: "Cursor agent for a Unity 2D game with an authoritative dedicated server, dual client/server build, architecture aligned to your diagrams."
+description: "Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server, dual client/server build, and architecture aligned to your diagrams."
 ---
 
 # Agent role
