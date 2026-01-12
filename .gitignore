@@ -171,6 +171,18 @@ ipch/
 
 # Visual Studio cache directory
 .vs/
+*.vsidx
+*.vspscc
+*.vssscc
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Unity Version Control (Plastic SCM)
+.plastic/
+plastic.*
+*.plastic
 
 # Gradle cache directory
 .gradle/
@@ -248,6 +260,10 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+
+# Visual Studio configuration files
+.vsconfig
+*.slnx
 
 # JetBrains Rider
 .idea/
