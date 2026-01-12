@@ -1,0 +1,54 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Cursor: List Agents",
+            "type": "shell",
+            "command": "./list_agents.sh",
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Cursor: Verify Agent Config",
+            "type": "shell",
+            "command": "node",
+            "args": [
+                ".cursor/scripts/manage-agents.js",
+                "verify"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Cursor: Open Agents Directory",
+            "type": "shell",
+            "command": "${config:terminal.integrated.defaultProfile.linux}",
+            "args": [
+                "-c",
+                "xdg-open .cursor/agents || open .cursor/agents || explorer .cursor/agents"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

@@ -1,0 +1,63 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "mo2 - Unity Multiplayer Game"
+		}
+	],
+	"settings": {
+		// Unity-specific file exclusions
+		"files.exclude": {
+			"**/Library": true,
+			"**/Temp": true,
+			"**/Logs": true,
+			"**/obj": true,
+			"**/bin": true,
+			"**/.vs": true,
+			"**/*.csproj": false,
+			"**/*.sln": false
+		},
+		"search.exclude": {
+			"**/Library": true,
+			"**/Temp": true,
+			"**/Logs": true,
+			"**/obj": true,
+			"**/bin": true,
+			"**/node_modules": true,
+			"**/Packages": false
+		},
+		"files.watcherExclude": {
+			"**/Library/**": true,
+			"**/Temp/**": true,
+			"**/Logs/**": true,
+			"**/obj/**": true,
+			"**/bin/**": true
+		},
+		// C# settings
+		"omnisharp.enableRoslynAnalyzers": true,
+		"omnisharp.enableEditorConfigSupport": true,
+		// Editor settings
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.organizeImports": "explicit"
+		},
+		"files.associations": {
+			"*.asmdef": "json",
+			"*.asmref": "json"
+		},
+		// File encoding
+		"files.encoding": "utf8",
+		"files.eol": "\n",
+		"dotnet.formatting.organizeImportsOnFormat": true
+	},
+	"extensions": {
+		"recommendations": [
+			"anysphere.csharp",
+			"ms-dotnettools.vscode-dotnet-runtime",
+			"tobiah.unity-tools",
+			"november.clover-unity",
+			"davidanson.vscode-markdownlint",
+			"openai.chatgpt"
+		]
+	}
+}
