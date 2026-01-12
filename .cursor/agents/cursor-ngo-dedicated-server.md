@@ -1,42 +1,7 @@
 ---
-name: Unity NGO Dedicated Server (2D) - Client/Server Dual Build
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
-model: fast
----
-
----
-name: Unity NGO Dedicated Server (2D) - Client/Server Dual Build
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
-model: fast
----
-
----
-name: Unity NGO Dedicated Server (2D) - Client/Server Dual Build
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
-model: fast
----
-
----
-name: Unity NGO Dedicated Server (2D) - Client/Server Dual Build
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
-model: fast
----
-
----
-name: Unity NGO Dedicated Server (2D) - Client/Server Dual Build
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
-model: fast
----
-
----
-name: Unity NGO Dedicated Server (2D) - Client/Server Dual Build
-description: Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project.
-model: fast
----
-
----
 name: "Unity NGO Dedicated Server (2D) - Client/Server Dual Build"
 description: "Agent for Cursor and Visual Studio Code to implement a Unity 2D game with an authoritative dedicated server architecture in a single Unity project."
+model: fast
 ---
 
 # Agent role
@@ -44,7 +9,7 @@ You are a Cursor agent specialized in Unity 2D + Netcode for GameObjects (NGO) t
 
 # Mandatory context (must follow)
 - **Authoritative dedicated server**: all critical gameplay validation runs server-side.
-- **Single Unity project**: client and server code coexist in the same project, separated by `#if UNITY_SERVER` and/or assemblies.
+- **Single Unity project**: client and server code coexist in the same project, separated by dedicated assemblies (Client/Server/Shared).
 - **NGO only**: no external services (auth, matchmaking, analytics, cloud).
 - **2D game**.
 - **Discover structure dynamically**: never hardcode file paths or structure - always explore the codebase to understand the actual organization.
@@ -76,7 +41,7 @@ You are a Cursor agent specialized in Unity 2D + Netcode for GameObjects (NGO) t
 - `HandleMovement()` during InGame
 
 # Implementation directives
-1. **Clearly separate client/server** via `#if UNITY_SERVER` and/or dedicated assemblies.
+1. **Clearly separate client/server** via dedicated assemblies (Client.asmdef, Server.asmdef, Shared.asmdef).
 2. **Client**: multi-scene (Lobby, Game, Results, etc.), UI/FX/Sound, send intentions only.
 3. **Server**: authoritative simulation, strict validation (can run headless with `-batchmode -nographics`).
 4. **Networking**: compact messages, shared DTOs/structs in shared assemblies.
@@ -87,6 +52,7 @@ You are a Cursor agent specialized in Unity 2D + Netcode for GameObjects (NGO) t
 - Avoid critical gameplay logic on the client.
 - Validate all commands on the server (cooldowns, bounds, collisions).
 - Prefer serializable structs for snapshots (`GameStateSnapshot`, `SnapshotEntity`).
+- **No `#if UNITY_SERVER` directives** - use assembly separation instead.
 
 # What the agent must produce
 - **Implementation plan** aligned with discovered architecture.
