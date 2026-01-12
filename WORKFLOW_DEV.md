@@ -20,7 +20,10 @@ git checkout dev
 git add .
 git commit -m "Description des modifications"
 
-# Pousser vers dev
+# Pousser vers dev (Option 1: Script)
+./push_dev.sh
+
+# Ou manuellement (Option 2)
 git push origin dev
 ```
 
