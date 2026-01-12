@@ -8,7 +8,7 @@
 
 3. **Remplis**:
    - **Name**: `ANTHROPIC_API_KEY`
-   - **Secret**: `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`
+   - **Secret**: `[TA_CLÉ_API_ICI]` (voir message privé ou fichier local)
 
 4. **Clique sur**: "Add secret"
 

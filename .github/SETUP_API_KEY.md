@@ -46,8 +46,9 @@ Une fois la clé ajoutée:
 
 Ta clé API (à ajouter dans GitHub Secrets):
 ```
-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
+[TA_CLÉ_API_ICI]
 ```
+⚠️ **La clé API t'a été envoyée en message privé. Ne jamais la commiter dans le code !**
 
 ## Sécurité
 

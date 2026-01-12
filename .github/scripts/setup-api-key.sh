@@ -4,7 +4,8 @@
 
 set -e
 
-API_KEY="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"
+# ⚠️ REMPLACER PAR TA CLÉ API (ne jamais commiter la clé réelle)
+API_KEY="${ANTHROPIC_API_KEY:-[TA_CLÉ_API_ICI]}"
 REPO="alexisdeudon01/cursor"
 SECRET_NAME="ANTHROPIC_API_KEY"
 
@@ -27,6 +28,14 @@ fi
 if ! gh auth status &> /dev/null; then
     echo "❌ Pas connecté à GitHub CLI"
     echo "🔐 Connexion: gh auth login"
+    exit 1
+fi
+
+# Vérifier que la clé n'est pas un placeholder
+if [ "$API_KEY" = "[TA_CLÉ_API_ICI]" ] || [ -z "$API_KEY" ]; then
+    echo "❌ Clé API non configurée"
+    echo "💡 Utilisez: ANTHROPIC_API_KEY='ta-cle' ./setup-api-key.sh"
+    echo "   Ou modifiez le script pour mettre ta clé (localement, ne pas commiter)"
     exit 1
 fi
 
