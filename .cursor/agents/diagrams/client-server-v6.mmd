@@ -1,0 +1,40 @@
+```mermaid
+graph LR
+    subgraph Server["🖥️ Serveur (Server.unity)"]
+        SM[ServerBootstrap]
+        SR[SessionRpcHub]
+        SC[SessionContainer]
+        GM[GameInstanceManager]
+        GR[GameRegistry]
+    end
+    
+    subgraph Client["💻 Client (Client.unity, Game.unity)"]
+        CB[ClientBootstrap]
+        UI[UI Components]
+        VC[View Components]
+    end
+    
+    subgraph Shared["📦 Shared (Networking.Shared)"]
+        DTO[DTOs]
+        IF[Interfaces]
+        EN[Enums]
+    end
+    
+    SM --> SR
+    SR --> SC
+    SC --> GM
+    GM --> GR
+    
+    CB --> UI
+    UI --> VC
+    
+    SR -.->|uses| Shared
+    CB -.->|uses| Shared
+    SM -.->|uses| Shared
+    
+    SR <-->|RPC| CB
+    
+    style Server fill:#FF6B6B
+    style Client fill:#4ECDC4
+    style Shared fill:#FFE66D
+```
