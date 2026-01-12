@@ -42,7 +42,7 @@ jobs:
         run: |
           pip install -q requests mermaid-cli || echo "mermaid-cli non disponible, utilisation API en ligne"
           
-      - name: Run Auto-Improve Script with AI
+      - name: Run Auto-Improve Script with AI (50% LLM + 50% Code)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -51,10 +51,11 @@ jobs:
           # Essayer d'abord avec IA, sinon fallback sur script basique
           if [ -n "$ANTHROPIC_API_KEY" ]; then
             echo "🤖 Utilisation de l'IA Claude pour amélioration..."
-            python .github/scripts/auto-improve-ai.py
+            echo "⏱️  Répartition: 50% LLM jeux 2D + 50% amélioration code"
+            python3 .github/scripts/auto-improve-ai.py
           else
             echo "⚠️ Mode basique (pas d'IA) - configurez ANTHROPIC_API_KEY pour activer l'IA"
-            python .github/scripts/auto-improve.py
+            python3 .github/scripts/auto-improve.py
           fi
           
       - name: Generate UML Diagrams
