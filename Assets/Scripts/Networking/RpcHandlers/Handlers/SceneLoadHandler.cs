@@ -126,9 +126,7 @@ namespace Networking.RpcHandlers
             // Ensure core singletons exist on the client.
             GameCommandClient.EnsureInstance();
             MapConfigSceneBuilder.EnsureInstance();
-#if !UNITY_SERVER
             EntityViewWorld.EnsureInstance();
-#endif
         
             // Initialize game registry if needed.
             GameRegistry.Initialize();
@@ -172,16 +170,13 @@ namespace Networking.RpcHandlers
             }
         
             // Store session info for input handling
-#if !UNITY_SERVER
             PlayerInputHandler.EnsureInstance();
             PlayerInputHandler.Instance.SetSession(sessionName);
-#endif
         
             // If we haven't received the config within a short delay, request a resync.
             SceneLoadRunner.Run(RequestResyncIfMissing());
         
             // Initialize debug UI
-#if !UNITY_SERVER
             GameDebugUI.EnsureInstance();
             if (GameDebugUI.Instance != null)
             {
@@ -192,7 +187,6 @@ namespace Networking.RpcHandlers
                 // Keep debug overlay hidden by default so it doesn't cover gameplay.
                 GameDebugUI.Instance.Hide();
             }
-#endif
         
             Log($"Game systems initialized for session '{sessionName}'");
         }

@@ -38,18 +38,6 @@ Unity multiplayer game framework with **session isolation** - multiple concurren
   - Auto-starts server, spawns SessionRpcHub, creates GameSessionManager
 - **Client**: ClientBootstrap.cs connects via `UnityTransport.SetConnectionData(ip, port)`
 
-### Directory Structure
-```
-Assets/Scripts/
-├── Core/           # Session isolation, game registry, player features
-│   ├── Games/      # SessionContainer, GameRegistry, IGameDefinition
-│   └── Players/    # IPlayerFeature interface
-├── Games/          # Game implementations (CircleGame, SquareGame)
-├── Networking/     # SessionRpcHub, bootstraps, player sync
-├── UI/             # SessionLobbyUI, menu systems
-└── Tests/          # Session isolation tests (see below)
-```
-
 ## Development Workflows
 
 ### Building Dedicated Server
@@ -113,3 +101,4 @@ When adding session functionality:
 - ❌ Don't skip authorization checks in SessionContainer operations
 - ❌ Don't use cross-session player lookups - always operate within one SessionContainer
 - ❌ Don't create GameObjects in `SetupClientVisuals()` when running as ScriptableObject asset
+

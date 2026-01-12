@@ -1,7 +1,5 @@
 # AI Coding Agent Instructions
 
-> **Agent utilisé** : Voir `.cursor/agents/cursor-ngo-dedicated-server.md` pour l'agent spécialisé Unity NGO Dedicated Server.
-
 ## Project Overview
 Unity multiplayer game framework with **session isolation** - multiple concurrent game sessions on one server, each with isolated player data, world space, and game state.
 
@@ -39,18 +37,6 @@ Unity multiplayer game framework with **session isolation** - multiple concurren
   - Parses command-line args: `-port`, `-maxplayers`
   - Auto-starts server, spawns SessionRpcHub, creates GameSessionManager
 - **Client**: ClientBootstrap.cs connects via `UnityTransport.SetConnectionData(ip, port)`
-
-### Directory Structure
-```
-Assets/Scripts/
-├── Core/           # Session isolation, game registry, player features
-│   ├── Games/      # SessionContainer, GameRegistry, IGameDefinition
-│   └── Players/    # IPlayerFeature interface
-├── Games/          # Game implementations (CircleGame, SquareGame)
-├── Networking/     # SessionRpcHub, bootstraps, player sync
-├── UI/             # SessionLobbyUI, menu systems
-└── Tests/          # Session isolation tests
-```
 
 ## Development Workflows
 

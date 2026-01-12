@@ -116,9 +116,7 @@ namespace Networking.StateSync
 
             BuildGridCells(config, currentGrid);
             BuildStaticGameElements(config, currentGrid);
-#if !UNITY_SERVER
             GridMapUIController.EnsureInstance().Render(currentGrid);
-#endif
 
             SetupCamera(config);
         }
@@ -337,7 +335,6 @@ namespace Networking.StateSync
             if (camera == null)
                 return;
 
-#if !UNITY_SERVER
             var legacyFollow = camera.GetComponent<CameraFollowPawn>();
             if (legacyFollow != null)
                 legacyFollow.enabled = false;
@@ -352,7 +349,6 @@ namespace Networking.StateSync
             }
 
             smart.ApplyMapConfig(config);
-#endif
         }
 
         public void CleanupScene()
@@ -364,12 +360,10 @@ namespace Networking.StateSync
             }
 
             currentGrid = null;
-#if !UNITY_SERVER
             if (GridMapUIController.Instance != null)
             {
                 GridMapUIController.Instance.Clear();
             }
-#endif
         }
 
         public MapConfigData GetCurrentConfig() => currentConfig;

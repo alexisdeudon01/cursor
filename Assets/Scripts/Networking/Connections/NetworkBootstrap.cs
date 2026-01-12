@@ -100,17 +100,12 @@ public class NetworkBootstrap : MonoBehaviour
         {
             Debug.Log("[NetworkBootstrap] Start running AutoStartBySceneName");
             
-            // Initialize server-specific settings if in batchmode or server build
-#if UNITY_SERVER
-            ParseCommandLine();
-            InitializeServerLogging();
-#else
+            // Initialize server-specific settings if in batchmode
             if (Application.isBatchMode)
             {
                 ParseCommandLine();
                 InitializeServerLogging();
             }
-#endif
 
             RegisterRequiredNetworkPrefabs();
             AutoStartBySceneName();
@@ -423,16 +418,14 @@ public class NetworkBootstrap : MonoBehaviour
                 return;
             }
 
-#if UNITY_SERVER
-            // In a dedicated server build, we ALWAYS want to start the server if we are in the Server scene
+            // If we are in the Server scene, start the server
             if (scene.Equals(SceneNames.Server, StringComparison.OrdinalIgnoreCase))
             {
-                Debug.Log("[NetworkBootstrap] Dedicated Server build - starting server");
+                Debug.Log("[NetworkBootstrap] Server scene detected - starting server");
                 StartServer();
                 networkStarted = true;
                 return;
             }
-#endif
 
             if (scene.Equals(SceneNames.Server, StringComparison.OrdinalIgnoreCase))
             {
@@ -1049,18 +1042,23 @@ public class NetworkBootstrap : MonoBehaviour
             return sceneService;
         }
 
-        SceneServiceLocalClient local = FindFirstObjectByType<SceneServiceLocalClient>();
-        if (local != null)
-        {
-            sceneService = local;
-            return sceneService;
-        }
+        // Find any MonoBehaviour that implements ISceneServiceSync
+        MonoBehaviour[] allMonoBehaviours = FindObjectsByType<MonoBehaviour>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None
+        );
 
-        SceneServiceNetworkServer server = FindFirstObjectByType<SceneServiceNetworkServer>();
-        if (server != null)
+        if (allMonoBehaviours != null && allMonoBehaviours.Length > 0)
         {
-            sceneService = server;
-            return sceneService;
+            for (int i = 0; i < allMonoBehaviours.Length; i++)
+            {
+                if (allMonoBehaviours[i] is ISceneServiceSync service && 
+                    allMonoBehaviours[i].gameObject.scene.IsValid())
+                {
+                    sceneService = service;
+                    return sceneService;
+                }
+            }
         }
 
         return null;
