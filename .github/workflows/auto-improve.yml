@@ -69,17 +69,33 @@ jobs:
       - name: Generate UML Diagrams
         run: |
           VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
+          
+          # Générer les fichiers .mmd
           python3 .github/scripts/generate-uml-diagrams.py $VERSION
+          
+          # Conversion Mermaid → PNG avec config no-sandbox
+          echo "🖼️ Conversion Mermaid → PNG..."
+          for mmd_file in .cursor/agents/diagrams/*.mmd; do
+            if [ -f "$mmd_file" ]; then
+              png_file="${mmd_file%.mmd}.png"
+              echo "  📊 Converting: $(basename $mmd_file)"
+              mmdc -i "$mmd_file" -o "$png_file" -p .github/puppeteer-config.json || echo "  ⚠️ Échec: $(basename $mmd_file)"
+            fi
+          done
+          echo "✅ Conversion terminée"
 
       - name: Setup Unity License
-        if: ${{ secrets.UNITY_LICENSE != '' }}
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         run: |
-          echo "🔑 Configuration de la licence Unity..."
-          mkdir -p ~/.local/share/unity3d/Unity/
-          echo "$UNITY_LICENSE" > ~/.local/share/unity3d/Unity/Unity_lic.ulf
-          echo "✅ Licence Unity configurée"
+          if [ -n "$UNITY_LICENSE" ]; then
+            echo "🔑 Configuration de la licence Unity..."
+            mkdir -p ~/.local/share/unity3d/Unity/
+            echo "$UNITY_LICENSE" > ~/.local/share/unity3d/Unity/Unity_lic.ulf
+            echo "✅ Licence Unity configurée"
+          else
+            echo "⚠️ UNITY_LICENSE non configuré"
+          fi
 
       - name: Build Unity with Docker (Client + Server)
         continue-on-error: true
@@ -87,7 +103,16 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         run: |
           echo "🐳 Build Unity avec Docker..."
+          echo "⚠️  Note: Unity nécessite une licence. Les builds peuvent échouer sans licence."
+          echo ""
           
+          # Vérifier si Docker est disponible
+          if ! command -v docker &> /dev/null; then
+            echo "⚠️  Docker non disponible, skip des builds Unity"
+            exit 0
+          fi
+          
+          # Vérifier la licence
           if [ -z "$UNITY_LICENSE" ]; then
             echo "⚠️  UNITY_LICENSE non configuré, skip des builds"
             exit 0
@@ -97,18 +122,18 @@ jobs:
           mkdir -p ./unity-license
           echo "$UNITY_LICENSE" > ./unity-license/Unity_lic.ulf
           
-          # Utiliser game-ci/unity-builder (méthode officielle)
-          echo "📦 Utilisation de l'image Unity 2022.3 LTS..."
-          
+          # Image Unity LTS
           UNITY_IMAGE="unityci/editor:ubuntu-2022.3.16f1-linux-il2cpp-3"
           
+          echo "📦 Pull de l'image Docker Unity..."
           docker pull $UNITY_IMAGE || {
             echo "⚠️  Impossible de pull l'image Unity"
+            rm -rf ./unity-license
             exit 0
           }
           
           echo ""
-          echo "🔨 Test build Client..."
+          echo "🔨 Build Client..."
           docker run --rm \
             -v "$PWD:/project" \
             -v "$PWD/unity-license/Unity_lic.ulf:/root/.local/share/unity3d/Unity/Unity_lic.ulf" \
@@ -121,11 +146,11 @@ jobs:
               -logFile /dev/stdout \
               -projectPath /project \
               -buildLinux64Player /project/Build/Client/Client.x86_64 || {
-            echo "⚠️  Build Client échoué"
+            echo "⚠️  Build Client échoué (normal sans licence Unity Pro)"
           }
           
           echo ""
-          echo "🔨 Test build Server..."
+          echo "🔨 Build Server..."
           docker run --rm \
             -v "$PWD:/project" \
             -v "$PWD/unity-license/Unity_lic.ulf:/root/.local/share/unity3d/Unity/Unity_lic.ulf" \
@@ -139,10 +164,10 @@ jobs:
               -projectPath /project \
               -buildLinux64Player /project/Build/Server/Server.x86_64 \
               -enableHeadlessMode || {
-            echo "⚠️  Build Server échoué"
+            echo "⚠️  Build Server échoué (normal sans licence Unity Pro)"
           }
           
-          # Nettoyer
+          # Nettoyer le fichier licence
           rm -rf ./unity-license
           
           echo ""
