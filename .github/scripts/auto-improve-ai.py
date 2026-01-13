@@ -17,9 +17,9 @@ from typing import List, Dict, Optional
 AGENTS_DIR = Path(".cursor/agents")
 PROJECT_ROOT = Path(".")
 BRANCH = "dev"
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()  # Strip pour enlever les sauts de ligne
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
+GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY", "")
 
 def get_latest_agent_version() -> int:
     """Trouve la dernière version de l'agent."""
@@ -335,8 +335,8 @@ def main():
     print(f"📊 Version actuelle: {current_version}")
     print(f"📊 Prochaine version: {next_version}")
     
-    # Recherche patterns jeux 2D
-    research_2d_game_patterns()
+    # Recherche patterns jeux 2D (déjà fait dans train_llm_games)
+    # Les patterns sont dans game-rules-dataset.json
     
     # Générer les diagrammes UML
     generate_uml_diagrams(next_version)

@@ -15,7 +15,7 @@ from typing import List, Dict
 DATASET_DIR = Path(".cursor/agents/llm-training-dataset")
 TEST_RESULTS_DIR = Path(".cursor/agents/llm-test-results")
 GAME_RULES_FILE = Path(".cursor/agents/game-rules-dataset.json")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()  # Strip pour enlever les sauts de ligne
 
 def collect_game_rules():
     """Collecte les règles de jeux 2D depuis internet/analyse."""
