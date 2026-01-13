@@ -25,6 +25,29 @@ jobs:
       pull-requests: write
       
     steps:
+      - name: Free Disk Space
+        run: |
+          echo "🧹 Nettoyage espace disque..."
+          echo "Avant nettoyage:"
+          df -h /
+          
+          # Supprimer les outils inutiles pour libérer de l'espace
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          # Nettoyer apt
+          sudo apt-get clean
+          sudo apt-get autoremove -y
+          
+          echo "Après nettoyage:"
+          df -h /
+          echo "✅ Espace libéré"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -59,34 +82,36 @@ jobs:
             echo "🤖 Utilisation de l'IA Claude pour amélioration..."
             python3 .github/scripts/auto-improve-ai.py
           else
-            echo "⚠️ Mode basique (pas d'IA) - configurez ANTHROPIC_API_KEY pour activer l'IA"
+            echo "⚠️ Mode basique (pas d'IA)"
             python3 .github/scripts/auto-improve.py
           fi
           
       - name: Verify Metrics Quality
         run: |
-          echo "📊 Vérification des métriques de qualité..."
-          python3 .github/scripts/verify-metrics.py || echo "⚠️ Vérification métriques échouée (continue)"
+          echo "📊 Vérification des métriques..."
+          python3 .github/scripts/verify-metrics.py || echo "⚠️ Métriques échouée"
           
       - name: Generate UML Diagrams
         env:
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
         run: |
           VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
-          
           python3 .github/scripts/generate-uml-diagrams.py $VERSION
           
           echo "🖼️ Conversion Mermaid → PNG..."
           for mmd_file in .cursor/agents/diagrams/*.mmd; do
             if [ -f "$mmd_file" ]; then
               png_file="${mmd_file%.mmd}.png"
-              filename=$(basename "$mmd_file")
-              echo "  📊 Converting: $filename"
               sed -i 's/```mermaid//g; s/```//g' "$mmd_file"
-              mmdc -i "$mmd_file" -o "$png_file" -p .github/puppeteer-config.json || echo "  ⚠️ Échec: $filename"
+              mmdc -i "$mmd_file" -o "$png_file" -p .github/puppeteer-config.json || echo "⚠️ Échec: $(basename $mmd_file)"
             fi
           done
-          echo "✅ Génération diagrammes terminée"
+          echo "✅ Diagrammes terminés"
+
+      - name: Check Disk Space Before Unity
+        run: |
+          echo "📊 Espace disque avant Unity:"
+          df -h /
 
       - name: Cache Unity Library
         uses: actions/cache@v4
@@ -124,17 +149,12 @@ jobs:
           
       - name: Build Status
         run: |
-          echo "📊 Résumé des builds Unity:"
-          if [ -d "Build/Client" ]; then
-            echo "  ✅ Client OK"
-          else
-            echo "  ⚠️ Client non généré"
-          fi
-          if [ -d "Build/Server" ]; then
-            echo "  ✅ Server OK"
-          else
-            echo "  ⚠️ Server non généré"
-          fi
+          echo "📊 Résumé builds Unity:"
+          [ -d "Build/Client" ] && echo "  ✅ Client OK" || echo "  ⚠️ Client non généré"
+          [ -d "Build/Server" ] && echo "  ✅ Server OK" || echo "  ⚠️ Server non généré"
+          echo ""
+          echo "📊 Espace disque final:"
+          df -h /
           
       - name: Commit and Push Changes
         if: github.event_name != 'pull_request'
@@ -149,9 +169,7 @@ jobs:
           fi
           git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
           for attempt in 1 2 3 4; do
-            if git push origin dev; then
-              exit 0
-            fi
+            if git push origin dev; then exit 0; fi
             git pull --rebase --autostash origin dev
           done
           exit 1
