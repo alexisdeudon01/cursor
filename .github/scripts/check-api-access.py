@@ -23,7 +23,7 @@ def test_anthropic_api():
     url = "https://api.anthropic.com/v1/messages"
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "anthropic-version": "2024-06-20",  # Version API mise à jour (était 2023-06-01)
         "content-type": "application/json"
     }
     
