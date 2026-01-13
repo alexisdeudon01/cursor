@@ -2,12 +2,12 @@ name: Auto-Improve
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 # ⚡ ANTI-DOUBLON: Annule automatiquement les anciens runs
 concurrency:
-  group: auto-improve-global
+  group: auto-improve
   cancel-in-progress: true
 
 permissions:
@@ -91,8 +91,3 @@ jobs:
         run: |
           echo "Run #${{ github.run_number }} - ${{ job.status }}"
           [ -f .github/scripts/track_costs.py ] && python3 .github/scripts/track_costs.py || true
-
-      - name: Generate UML Diagrams
-        run: |
-          VERSION=$(date +%Y%m%d%H%M)
-          python3 .github/scripts/generate-uml-diagrams.py 1
