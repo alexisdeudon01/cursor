@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-01-13T00:21:33.589514",
+  "rules_collected": 3,
+  "dataset_size": 2,
+  "llm_config": {
+    "method": "prompt_specialization",
+    "system_prompt": "Tu es un LLM sp\u00e9cialis\u00e9 dans le d\u00e9veloppement de jeux 2D pour Unity NGO.\nTu connais les patterns communs: mouvement (adjacent, diagonal, range), capture (replace, remove), victoire (line, area, count).\nTu g\u00e9n\u00e8res du code C# pour Unity qui impl\u00e9mente GameDefinitionAsset.",
+    "training_examples": 2
+  },
+  "test_result": {
+    "status": "error",
+    "code": 401,
+    "message": "Invalid API key"
+  }
+}
