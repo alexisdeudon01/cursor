@@ -65,6 +65,8 @@ jobs:
           find Assets -name "*.unity" 2>/dev/null | wc -l | xargs echo "Scenes:"
 
       - name: Generate UML Diagrams
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
         run: |
           echo "📐 Génération Mermaid"
           python3 .github/scripts/generate-uml-diagrams.py 1
