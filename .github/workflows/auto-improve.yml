@@ -45,7 +45,8 @@ jobs:
         run: |
           pip install -q requests
           npm install -g @mermaid-js/mermaid-cli
-          npx playwright install chromium
+          # Installer Playwright avec toutes les dépendances système
+          npx playwright install --with-deps chromium
           
       - name: Run Auto-Improve Script with AI
         env:
