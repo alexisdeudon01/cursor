@@ -217,9 +217,20 @@ Le jeu doit être simple mais fonctionnel."""
                 "file": str(test_file),
                 "code_length": len(generated_code)
             }
+        elif response.status_code == 401:
+            print(f"❌ Erreur API: 401 - Clé API invalide ou expirée")
+            print(f"   💡 Vérifiez ANTHROPIC_API_KEY dans GitHub Secrets")
+            return {"status": "error", "code": 401, "message": "Invalid API key"}
         else:
             print(f"❌ Erreur API: {response.status_code}")
             return {"status": "error", "code": response.status_code}
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            print(f"❌ Erreur API: 401 - Clé API invalide ou expirée")
+            print(f"   💡 Vérifiez ANTHROPIC_API_KEY dans GitHub Secrets")
+        else:
+            print(f"❌ Erreur API: {e.response.status_code}")
+        return {"status": "error", "code": e.response.status_code}
     except Exception as e:
         print(f"❌ Erreur: {e}")
         return {"status": "error", "message": str(e)}
