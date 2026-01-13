@@ -7,8 +7,7 @@
         "Networking.Shared"
     ],
     "includePlatforms": [
-        "LinuxStandalone64Server",
-        "WindowsStandalone64Server"
+        "LinuxStandalone64Server"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

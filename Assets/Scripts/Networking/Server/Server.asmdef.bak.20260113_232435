@@ -1,15 +1,16 @@
 {
-    "name": "Networking.Client",
+    "name": "Networking.Server",
     "references": [
         "GUID:8c3a8e0b3c3b4c4a8e0b3c3b4c4a8e0b3",
         "Unity.Netcode.Runtime",
         "Unity.Collections",
         "Networking.Shared"
     ],
-    "includePlatforms": [],
-    "excludePlatforms": [
-        "LinuxStandalone64Server"
+    "includePlatforms": [
+        "LinuxStandalone64Server",
+        "WindowsStandalone64Server"
     ],
+    "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
