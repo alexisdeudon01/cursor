@@ -30,6 +30,7 @@ jobs:
         with:
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
+          lfs: true
           
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,7 +46,8 @@ jobs:
         run: |
           pip install -q requests
           npm install -g @mermaid-js/mermaid-cli
-          npx playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
           
       - name: Run Auto-Improve Script with AI
         env:
@@ -67,135 +69,89 @@ jobs:
           python3 .github/scripts/verify-metrics.py || echo "⚠️ Vérification métriques échouée (continue)"
           
       - name: Generate UML Diagrams
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
         run: |
           VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
           
-          # Générer les fichiers .mmd
           python3 .github/scripts/generate-uml-diagrams.py $VERSION
           
-          # Conversion Mermaid → PNG avec config no-sandbox
           echo "🖼️ Conversion Mermaid → PNG..."
           for mmd_file in .cursor/agents/diagrams/*.mmd; do
             if [ -f "$mmd_file" ]; then
               png_file="${mmd_file%.mmd}.png"
-              echo "  📊 Converting: $(basename $mmd_file)"
-              mmdc -i "$mmd_file" -o "$png_file" -p .github/puppeteer-config.json || echo "  ⚠️ Échec: $(basename $mmd_file)"
+              filename=$(basename "$mmd_file")
+              echo "  📊 Converting: $filename"
+              sed -i 's/```mermaid//g; s/```//g' "$mmd_file"
+              mmdc -i "$mmd_file" -o "$png_file" -p .github/puppeteer-config.json || echo "  ⚠️ Échec: $filename"
             fi
           done
-          echo "✅ Conversion terminée"
+          echo "✅ Génération diagrammes terminée"
 
-      - name: Setup Unity License
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        run: |
-          if [ -n "$UNITY_LICENSE" ]; then
-            echo "🔑 Configuration de la licence Unity..."
-            mkdir -p ~/.local/share/unity3d/Unity/
-            echo "$UNITY_LICENSE" > ~/.local/share/unity3d/Unity/Unity_lic.ulf
-            echo "✅ Licence Unity configurée"
-          else
-            echo "⚠️ UNITY_LICENSE non configuré"
-          fi
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: Library-
 
-      - name: Build Unity with Docker (Client + Server)
+      - name: Build Unity Client
+        uses: game-ci/unity-builder@v4
         continue-on-error: true
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneLinux64
+          buildName: Client
+          buildsPath: Build/Client
+          versioning: None
+          
+      - name: Build Unity Server
+        uses: game-ci/unity-builder@v4
+        continue-on-error: true
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneLinux64
+          buildName: Server
+          buildsPath: Build/Server
+          versioning: None
+          customParameters: -standaloneBuildSubtarget Server
+          
+      - name: Build Status
         run: |
-          echo "🐳 Build Unity avec Docker..."
-          echo "⚠️  Note: Unity nécessite une licence. Les builds peuvent échouer sans licence."
-          echo ""
-          
-          # Vérifier si Docker est disponible
-          if ! command -v docker &> /dev/null; then
-            echo "⚠️  Docker non disponible, skip des builds Unity"
-            exit 0
+          echo "📊 Résumé des builds Unity:"
+          if [ -d "Build/Client" ]; then
+            echo "  ✅ Client OK"
+          else
+            echo "  ⚠️ Client non généré"
           fi
-          
-          # Vérifier la licence
-          if [ -z "$UNITY_LICENSE" ]; then
-            echo "⚠️  UNITY_LICENSE non configuré, skip des builds"
-            exit 0
+          if [ -d "Build/Server" ]; then
+            echo "  ✅ Server OK"
+          else
+            echo "  ⚠️ Server non généré"
           fi
-          
-          # Créer le fichier de licence pour Docker
-          mkdir -p ./unity-license
-          echo "$UNITY_LICENSE" > ./unity-license/Unity_lic.ulf
-          
-          # Image Unity LTS
-          UNITY_IMAGE="unityci/editor:ubuntu-2022.3.16f1-linux-il2cpp-3"
-          
-          echo "📦 Pull de l'image Docker Unity..."
-          docker pull $UNITY_IMAGE || {
-            echo "⚠️  Impossible de pull l'image Unity"
-            rm -rf ./unity-license
-            exit 0
-          }
-          
-          echo ""
-          echo "🔨 Build Client..."
-          docker run --rm \
-            -v "$PWD:/project" \
-            -v "$PWD/unity-license/Unity_lic.ulf:/root/.local/share/unity3d/Unity/Unity_lic.ulf" \
-            -w /project \
-            $UNITY_IMAGE \
-            unity-editor \
-              -batchmode \
-              -nographics \
-              -quit \
-              -logFile /dev/stdout \
-              -projectPath /project \
-              -buildLinux64Player /project/Build/Client/Client.x86_64 || {
-            echo "⚠️  Build Client échoué (normal sans licence Unity Pro)"
-          }
-          
-          echo ""
-          echo "🔨 Build Server..."
-          docker run --rm \
-            -v "$PWD:/project" \
-            -v "$PWD/unity-license/Unity_lic.ulf:/root/.local/share/unity3d/Unity/Unity_lic.ulf" \
-            -w /project \
-            $UNITY_IMAGE \
-            unity-editor \
-              -batchmode \
-              -nographics \
-              -quit \
-              -logFile /dev/stdout \
-              -projectPath /project \
-              -buildLinux64Player /project/Build/Server/Server.x86_64 \
-              -enableHeadlessMode || {
-            echo "⚠️  Build Server échoué (normal sans licence Unity Pro)"
-          }
-          
-          # Nettoyer le fichier licence
-          rm -rf ./unity-license
-          
-          echo ""
-          echo "✅ Tests de compilation Docker terminés"
           
       - name: Commit and Push Changes
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-
           git add -A
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-
           git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
-
           for attempt in 1 2 3 4; do
             if git push origin dev; then
               exit 0
             fi
-            echo "Push rejected; rebasing on origin/dev and retrying (attempt $attempt/4)..."
             git pull --rebase --autostash origin dev
           done
-
-          echo "ERROR: failed to push to dev after 4 attempts"
           exit 1
