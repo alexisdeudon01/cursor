@@ -1,48 +1,16 @@
-# Unity
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/
-[Bb]uilds/
 [Ll]ogs/
-[Uu]ser[Ss]ettings/
+[Uu]serSettings/
 *.csproj
-*.unityproj
 *.sln
 *.suo
-*.tmp
 *.user
-*.userprefs
-*.pidb
-*.booproj
-*.svd
-*.pdb
-*.mdb
-*.opendb
-*.VC.db
-*.pidb.meta
-*.pdb.meta
-*.mdb.meta
-
-# OS
 .DS_Store
 Thumbs.db
-
-# IDE
 .idea/
 .vs/
-.vscode/
-
-# Build artifacts
-*.apk
-*.aab
-*.unitypackage
-*.app
-
-# Reports
-.github/reports/
-Build/
-Library/
-Temp/
-Logs/
-*.log
+__pycache__/
+*.pyc

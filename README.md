@@ -1,26 +1,54 @@
-# TheBestClient
+# TheBestClient - Auto-Evolving Game
 
-Full Authoritative Server game using Unity Netcode for GameObjects.
+Jeu 2D avec serveur full authoritative, auto-amélioré par EvoAgentX.
 
 ## Architecture
 
-- **Server**: Full authority (game state, physics, validation)
-- **Client**: Display only (input sending, rendering)
-- **DOD**: Data-Oriented Design with struct DTOs
+### UN SEUL BUILD
+
+- **Serveur** (`--server`): Charge `ServerScene`, logique uniquement, headless possible
+- **Client** (`--client`): Charge `MainMenu`, full graphique UI Toolkit
+
+### UI Toolkit
+
+Le client utilise **exclusivement** UI Toolkit :
+- `.uxml` pour la structure
+- `.uss` pour les styles
+- Pas de Canvas legacy
 
 ## Usage
 
 ```bash
+# Serveur (headless)
 ./TheBestGame --server --port 7777
-./TheBestGame --client --ip 192.168.1.100 --port 7777
+
+# Client (graphique)
+./TheBestGame --client --ip 192.168.1.1 --port 7777
 ```
 
-## CI/CD
+## Structure
 
-Auto-improvement runs every 15 minutes via GitHub Actions.
+```
+Assets/
+├── Scenes/
+│   ├── ServerScene.unity    ← Serveur uniquement
+│   ├── MainMenu.unity       ← Client: entrée
+│   ├── Lobby.unity          ← Client: lobbies
+│   └── Game.unity           ← Client: jeu
+├── UI/
+│   ├── Styles/*.uss         ← Styles UI Toolkit
+│   ├── Templates/*.uxml     ← Layouts UI Toolkit
+│   └── Scripts/*.cs         ← Controllers UI
+└── Scripts/
+    ├── Network/             ← Réseau
+    └── Game/                ← Logique jeu
+```
 
-## Tech Stack
+## Auto-Amélioration
 
-- Unity 6000.0.23f1
-- Netcode for GameObjects 2.0.0
-- Unity Transport 2.3.0
+Le projet s'améliore automatiquement toutes les heures via GitHub Actions + EvoAgentX.
+Rollback automatique si régression détectée.
+
+## Voir les runs
+
+https://github.com/alexisdeudon01/cursor/actions

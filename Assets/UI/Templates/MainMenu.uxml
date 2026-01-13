@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Style src="project://database/Assets/UI/Styles/MainTheme.uss" />
+    
+    <ui:VisualElement class="main-container center-container">
+        <ui:VisualElement class="card" style="width: 400px;">
+            <ui:Label text="TheBestGame" class="title" style="align-self: center;" />
+            
+            <ui:TextField name="player-name" label="Nom du joueur" class="input-field" />
+            <ui:TextField name="server-ip" label="IP du serveur" value="127.0.0.1" class="input-field" />
+            <ui:TextField name="server-port" label="Port" value="7777" class="input-field" />
+            
+            <ui:VisualElement style="height: 20px;" />
+            
+            <ui:Button name="btn-connect" text="Connexion" class="btn btn-primary" />
+            <ui:Button name="btn-quit" text="Quitter" class="btn btn-secondary" style="margin-top: 10px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

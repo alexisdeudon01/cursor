@@ -1,91 +1,133 @@
-name: Auto-Improve (24/7)
+name: Auto-Improve (EvoAgentX)
 
-# ═══════════════════════════════════════════════════════════════════
-# DÉCLENCHEURS
-# - Toutes les 15 minutes (fonctionne même PC éteint)
-# - Manuel via GitHub UI
-# - Sur push vers main
-# ═══════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════
+# CONFIGURATION: 1 HEURE INTERVAL + 4-CORE RUNNER
+# ═══════════════════════════════════════════════════════════════════════════
+# Coût estimé: ~$346/mois (720 runs × ~$0.48/run)
+# Temps par run: ~30-35 min
+# ═══════════════════════════════════════════════════════════════════════════
+
 on:
   schedule:
-    - cron: '*/15 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *'  # Toutes les heures (minute 0)
+  workflow_dispatch:      # Déclenchement manuel
   push:
     branches: [main]
+    paths: ['Assets/**', '.cursor/agents/**']
 
 concurrency:
   group: auto-improve
   cancel-in-progress: true
 
+env:
+  PYTHONUNBUFFERED: "1"
+
 jobs:
   improve:
-    runs-on: ubuntu-latest
-    timeout-minutes: 14
+    runs-on: ubuntu-latest-4-cores  # 4 vCPU, 16 GB RAM - $0.016/min
+    timeout-minutes: 55              # 55 min max (marge de sécurité)
     permissions:
       contents: write
 
     steps:
       # ═══════════════════════════════════════════════════════════════
-      # 1. LIBÉRER ESPACE DISQUE
+      # SETUP
       # ═══════════════════════════════════════════════════════════════
       - name: Free Disk Space
         run: |
-          echo "🧹 Nettoyage espace disque..."
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           docker system prune -af || true
-          df -h /
 
-      # ═══════════════════════════════════════════════════════════════
-      # 2. CHECKOUT
-      # ═══════════════════════════════════════════════════════════════
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      # ═══════════════════════════════════════════════════════════════
-      # 3. CACHE UNITY LIBRARY
-      # ═══════════════════════════════════════════════════════════════
-      - name: Cache Unity Library
-        uses: actions/cache@v4
-        with:
-          path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: Library-
-
-      # ═══════════════════════════════════════════════════════════════
-      # 4. SETUP PYTHON
-      # ═══════════════════════════════════════════════════════════════
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install Dependencies
-        run: pip install requests
+        run: |
+          pip install --upgrade pip
+          pip install evoagentx requests pyyaml
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**') }}
+          restore-keys: Library-
 
       # ═══════════════════════════════════════════════════════════════
-      # 5. AI IMPROVEMENT (Claude API)
+      # SAVE STATE BEFORE (pour rollback)
       # ═══════════════════════════════════════════════════════════════
-      - name: AI Improvement
+      - name: Save State Before
+        id: before
+        run: |
+          COMMIT_BEFORE=$(git rev-parse HEAD)
+          echo "commit=$COMMIT_BEFORE" >> $GITHUB_OUTPUT
+          
+          # Copier les fichiers importants
+          mkdir -p /tmp/state-before
+          cp -r Assets/Scripts /tmp/state-before/ 2>/dev/null || true
+          cp .cursor/agents/agent.md /tmp/state-before/ 2>/dev/null || true
+          
+          echo "✅ État sauvegardé: $COMMIT_BEFORE"
+
+      # ═══════════════════════════════════════════════════════════════
+      # PHASE 1: MÉTRIQUES PAR CLAUDE
+      # ═══════════════════════════════════════════════════════════════
+      - name: Generate Metrics (Claude)
+        id: metrics
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          if [ -n "$ANTHROPIC_API_KEY" ] && [ -f ".github/scripts/auto-improve-ai.py" ]; then
-            echo "🤖 Running AI improvement..."
-            python3 .github/scripts/auto-improve-ai.py || echo "⚠️ AI script failed"
-          else
-            echo "ℹ️ AI improvement skipped (no API key or script)"
-          fi
+        run: python3 .github/scripts/generate_metrics.py
 
       # ═══════════════════════════════════════════════════════════════
-      # 6. BUILD UNITY VIA DOCKER
+      # PHASE 2: EVOAGENTX WORKFLOW
       # ═══════════════════════════════════════════════════════════════
-      - name: Build Unity (Docker)
+      - name: Run EvoAgentX
+        id: evoagentx
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 .github/scripts/evoagentx_improve.py
+
+      # ═══════════════════════════════════════════════════════════════
+      # PHASE 3: ÉVALUATION POST-AMÉLIORATION
+      # ═══════════════════════════════════════════════════════════════
+      - name: Evaluate Changes
+        id: evaluate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 .github/scripts/evaluate_changes.py
+
+      # ═══════════════════════════════════════════════════════════════
+      # PHASE 4: ROLLBACK SI RÉGRESSION
+      # ═══════════════════════════════════════════════════════════════
+      - name: Rollback if Worse
+        if: steps.evaluate.outputs.should_rollback == 'true'
+        run: |
+          echo "⚠️ RÉGRESSION DÉTECTÉE - ROLLBACK"
+          echo "Score avant: ${{ steps.evaluate.outputs.score_before }}"
+          echo "Score après: ${{ steps.evaluate.outputs.score_after }}"
+          
+          # Restaurer les fichiers
+          cp -r /tmp/state-before/Scripts Assets/ 2>/dev/null || true
+          cp /tmp/state-before/agent.md .cursor/agents/ 2>/dev/null || true
+          
+          # Marquer le rollback
+          echo "ROLLBACK at $(date)" >> .github/reports/rollback-history.txt
+          
+          echo "✅ Rollback effectué"
+
+      # ═══════════════════════════════════════════════════════════════
+      # PHASE 5: BUILD UNITY
+      # ═══════════════════════════════════════════════════════════════
+      - name: Build Unity
         id: unity-build
         uses: game-ci/unity-builder@v4
         continue-on-error: true
@@ -98,63 +140,72 @@ jobs:
           buildName: TheBestGame
           buildsPath: Build
           unityVersion: 6000.0.23f1
-          dockerCpuLimit: 2
-          dockerMemoryLimit: 12g
 
       # ═══════════════════════════════════════════════════════════════
-      # 7. UPLOAD ARTIFACT
+      # PHASE 6: ROLLBACK SI BUILD ÉCHOUE
+      # ═══════════════════════════════════════════════════════════════
+      - name: Rollback if Build Failed
+        if: steps.unity-build.outcome == 'failure'
+        run: |
+          echo "❌ BUILD ÉCHOUÉ - ROLLBACK"
+          
+          # Restaurer
+          cp -r /tmp/state-before/Scripts Assets/ 2>/dev/null || true
+          cp /tmp/state-before/agent.md .cursor/agents/ 2>/dev/null || true
+          
+          echo "BUILD_FAILED at $(date)" >> .github/reports/rollback-history.txt
+          echo "✅ Rollback effectué"
+
+      # ═══════════════════════════════════════════════════════════════
+      # UPLOAD & COMMIT
       # ═══════════════════════════════════════════════════════════════
       - name: Upload Build
         if: steps.unity-build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: TheBestGame-Linux-${{ github.run_number }}
+          name: TheBestGame-${{ github.run_number }}
           path: Build/StandaloneLinux64
           retention-days: 7
 
-      # ═══════════════════════════════════════════════════════════════
-      # 8. BUILD STATUS
-      # ═══════════════════════════════════════════════════════════════
-      - name: Build Status
+      - name: Update Agent Version
         run: |
-          echo "╔═══════════════════════════════════════════════════════════╗"
-          echo "║                    BUILD STATUS                           ║"
-          echo "╠═══════════════════════════════════════════════════════════╣"
-          echo "║ Unity Build: ${{ steps.unity-build.outcome }}"
-          echo "║ Run Number:  ${{ github.run_number }}"
-          echo "║ Time:        $(date '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "╚═══════════════════════════════════════════════════════════╝"
+          # Incrémenter version dans agent.md
+          VERSION=$(grep -oP 'Version\*\*: \K[0-9]+\.[0-9]+\.[0-9]+' .cursor/agents/agent.md || echo "1.0.0")
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          
+          sed -i "s/Version\*\*: $VERSION/Version**: $NEW_VERSION/g" .cursor/agents/agent.md
+          sed -i "s/AUTO_DATE/$(date '+%Y-%m-%d %H:%M')/g" .cursor/agents/agent.md
+          
+          echo "📌 Version: $VERSION → $NEW_VERSION"
 
-      # ═══════════════════════════════════════════════════════════════
-      # 9. COMMIT & PUSH
-      # ═══════════════════════════════════════════════════════════════
       - name: Commit Changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Ignorer les gros dossiers
-          echo -e "Build/\nLibrary/\nTemp/\nLogs/\n*.log" >> .gitignore
+          # Tag pour rollback facile
+          git tag -a "pre-improve-${{ github.run_number }}" -m "Before improvement #${{ github.run_number }}" 2>/dev/null || true
+          
+          echo -e "Build/\nLibrary/\nTemp/\nLogs/" >> .gitignore
           
           git add -A
-          git reset -- Build/ Library/ Temp/ Logs/ 2>/dev/null || true
+          git reset -- Build/ Library/ Temp/ Logs/
           
           if git diff --staged --quiet; then
             echo "✅ Pas de changements"
             exit 0
           fi
           
-          git commit -m "🤖 Auto-improve #${{ github.run_number }} [skip ci]"
+          SCORE="${{ steps.evaluate.outputs.score_after }}"
+          git commit -m "🤖 Auto-improve #${{ github.run_number }} (score: ${SCORE:-N/A}) [skip ci]"
           
-          for i in 1 2 3 4 5; do
-            if git push origin main; then
-              echo "✅ Push réussi"
-              exit 0
-            fi
-            echo "⚠️ Push échoué, tentative $i/5..."
+          # Push avec retry
+          for i in 1 2 3; do
+            git push origin main --tags && exit 0
             git pull --rebase origin main
             sleep 2
           done
-          
-          echo "❌ Push échoué après 5 tentatives"
-          exit 1

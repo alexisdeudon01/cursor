@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="project://database/Assets/UI/Styles/MainTheme.uss" />
+    
+    <ui:VisualElement class="main-container">
+        <ui:VisualElement style="flex-direction: row; justify-content: space-between; margin-bottom: 20px;">
+            <ui:Label text="Lobbies disponibles" class="subtitle" />
+            <ui:Button name="btn-refresh" text="Rafraîchir" class="btn btn-secondary" />
+        </ui:VisualElement>
+        
+        <ui:ScrollView name="lobby-list" class="list-container" style="flex-grow: 1;">
+            <!-- Lobby items ajoutés dynamiquement -->
+        </ui:ScrollView>
+        
+        <ui:VisualElement style="flex-direction: row; margin-top: 20px;">
+            <ui:TextField name="lobby-name" label="Nom du lobby" class="input-field" style="flex-grow: 1;" />
+            <ui:Button name="btn-create" text="Créer" class="btn btn-primary" style="margin-left: 10px;" />
+        </ui:VisualElement>
+        
+        <ui:Button name="btn-back" text="Retour" class="btn btn-secondary" style="margin-top: 10px;" />
+    </ui:VisualElement>
+</ui:UXML>
