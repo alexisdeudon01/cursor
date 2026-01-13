@@ -1,27 +1,26 @@
 # Analyse Auto-Improve avec IA - Version 9
-**Date**: 2026-01-13 19:53:02
+**Date**: 2026-01-13 20:10:19
 **Branche**: dev
 **Exécution**: GitHub Actions avec IA Claude
 
 ## Analyse effectuée par IA
 
 ### Findings
-- **architecture** (critical): StateMachine duplicata détecté - deux fichiers StateMachine.cs dans Core/ et Core/Patterns/ créent une confusion architecturale
-- **modularity** (important): SessionContainerManager manque d'interface pour améliorer la modularité et les tests
-- **network** (important): MapConfigData utilise probablement INetworkSerializable mais manque de validation des données réseau
-- **architecture** (minor): HeadlessEntitiesBootstrap pourrait bénéficier d'un pattern Factory pour l'initialisation
+- **architecture** (critical): StateMachine dupliqué: Assets/Scripts/Core/StateMachine.cs et Assets/Scripts/Core/Patterns/StateMachine.cs créent une confusion architecturale
+- **modularity** (important): SessionContainer et SessionContainerManager ont des responsabilités qui se chevauchent, violant le principe de responsabilité unique
+- **architecture** (important): Manque d'interfaces pour les commandes - IPlayerCommand et IPlayerCommandContext sont isolés sans implémentations visibles
+- **network** (minor): MapConfigData pourrait bénéficier d'attributs de sérialisation NGO explicites
 
 ### Améliorations proposées
-- **refactor**: Consolider StateMachine - supprimer le duplicata et utiliser uniquement Core/Patterns/StateMachine.cs
-- **code_change**: Ajouter interface ISessionContainerManager pour améliorer la modularité
-- **code_change**: Ajouter validation réseau pour MapConfigData
-- **code_change**: Améliorer HeadlessEntitiesBootstrap avec pattern Factory
-- **documentation**: Ajouter documentation API pour les interfaces principales
+- **refactor**: Consolidation des StateMachine - supprimer la duplication et créer une hiérarchie claire
+- **code_change**: Refactorisation SessionContainer - séparer les responsabilités de gestion et de données
+- **code_change**: Implémentation concrète des commandes pour améliorer l'architecture modulaire
+- **code_change**: Amélioration MapConfigData avec attributs NGO explicites
 
 ### Modularité
-- **Games**: ok - GameRegistry et IGameDefinition permettent l'ajout facile de nouveaux jeux. Factory pattern bien implémenté.
-- **Sessions**: needs_improvement - SessionContainerManager manque d'interface. Ajout d'ISessionContainerManager recommandé pour améliorer la testabilité et la modularité.
-- **Maps**: needs_improvement - MapConfigData existe mais manque de validation réseau. Structure semble modulaire mais nécessite consolidation avec le système de sessions.
+- **Games**: ok - GameRegistry + IGameDefinition + GameContainer permettent l'ajout facile de nouveaux jeux. Architecture modulaire respectée.
+- **Sessions**: needs_improvement - SessionContainer et SessionContainerManager ont des responsabilités qui se chevauchent. Besoin de clarifier la séparation des responsabilités.
+- **Maps**: needs_improvement - MapConfigData existe mais manque d'un système de registry/factory pour la gestion modulaire des maps comme pour les jeux.
 
 ---
 **Généré automatiquement par IA (Claude) via GitHub Actions**
