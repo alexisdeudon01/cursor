@@ -2,8 +2,8 @@ name: Auto-Improve Project (Thebestclient)
 
 on:
   schedule:
-    # Exécute toutes les 30 minutes
-    - cron: '*/30 * * * *'
+    # Exécute toutes les 2 heures (au lieu de 30 minutes pour réduire les coûts)
+    - cron: '0 */2 * * *'
   workflow_dispatch: # Permet de lancer manuellement
   push:
     branches:
