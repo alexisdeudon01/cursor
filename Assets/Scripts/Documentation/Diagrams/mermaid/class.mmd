@@ -1,0 +1,74 @@
+---
+title: Session Isolation - Class Diagram
+---
+classDiagram
+    direction TB
+    
+    namespace Core {
+        class SessionContainer {
+            -string sessionId
+            -ulong hostClientId
+            -SessionState state
+            -HashSet~ulong~ authorizedClients
+            -Dictionary~ulong, SessionPlayer~ players
+            +Initialize()
+            +AuthorizeClient(ulong clientId) bool
+            +RevokeClient(ulong clientId) bool
+            +ValidateAccess(ulong clientId) bool
+            +AddPlayer(ulong clientId, string name) bool
+            +RemovePlayer(ulong clientId) bool
+            +Dispose()
+        }
+        
+        class SessionContainerManager {
+            -ConcurrentDictionary~string, SessionContainer~ containers
+            +OnSecurityViolation Action
+            +CreateSession(string sessionId, ulong hostClientId) SessionContainer
+            +GetSession(string sessionId) SessionContainer
+            +GetAuthorizedSession(string sessionId, ulong clientId) SessionContainer
+            +RemoveSession(string sessionId) bool
+        }
+        
+        class SessionState {
+            <<enumeration>>
+            Lobby
+            Starting
+            InGame
+            Ended
+        }
+    }
+    
+    namespace Networking {
+        class GameSessionManager {
+            -SessionContainerManager containerManager
+            +CreateSession(string gameId, string sessionName) string
+            +JoinSession(string sessionId, ulong clientId) bool
+            +StartGame(string sessionId)
+        }
+        
+        class SessionRpcHub {
+            +RequestCreateSessionServerRpc()
+            +RequestJoinSessionServerRpc()
+            +SessionCreatedClientRpc()
+            +PlayerJoinedClientRpc()
+        }
+    }
+    
+    namespace Game {
+        class SessionPawnVisibility {
+            -string localSessionId
+            +SetLocalSession(string sessionId)
+            +RegisterPawn(NetworkObject pawn, string sessionId)
+            +UpdateAllPawnVisibility()
+        }
+        
+        class PlayerPawn {
+            -string sessionId
+            +Initialize(string sessionId, ulong clientId)
+        }
+    }
+    
+    SessionContainerManager "1" *-- "*" SessionContainer
+    SessionContainer --> SessionState
+    GameSessionManager --> SessionContainerManager
+    SessionPawnVisibility --> PlayerPawn

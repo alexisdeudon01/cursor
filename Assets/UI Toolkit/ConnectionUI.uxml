@@ -1,0 +1,31 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement name="ConnectionPanel" style="flex-grow: 1; justify-content: center; align-items: center; background-color: rgba(0,0,0,0);">
+        
+        <ui:VisualElement name="popup" style="width: 360px; padding: 20px; background-color: rgba(30,30,30,0.95); border-radius: 10px; border-color: rgb(60,60,60); border-width: 1px;">
+            
+            <ui:Label text="Connect to Server" style="font-size: 20px; margin-bottom: 20px; -unity-font-style: bold; color: white; -unity-text-align: middle-center;" />
+            
+            <!-- IP Field -->
+            <ui:Label text="Server IP" style="color: rgb(180,180,180); margin-bottom: 4px; font-size: 12px;" />
+            <ui:TextField name="IPField" value="127.0.0.1" style="height: 36px; margin-bottom: 12px; font-size: 14px;" />
+            
+            <!-- Port Field -->
+            <ui:Label text="Port" style="color: rgb(180,180,180); margin-bottom: 4px; font-size: 12px;" />
+            <ui:TextField name="PortField" value="7777" style="height: 36px; margin-bottom: 20px; font-size: 14px;" />
+            
+            <!-- Buttons -->
+            <ui:VisualElement style="flex-direction: row; justify-content: center;">
+                <ui:Button name="ConnectButton" text="Connect" style="width: 140px; height: 44px; font-size: 14px; margin-right: 10px; background-color: rgb(60,120,60); border-radius: 4px;" />
+                <ui:Button name="TestButton" text="Test" style="width: 100px; height: 44px; font-size: 14px; background-color: rgb(80,80,120); border-radius: 4px;" />
+            </ui:VisualElement>
+            
+            <!-- Status -->
+            <ui:Label name="StatusLabel" text="Enter server IP and port" style="margin-top: 16px; color: rgb(150,150,150); font-size: 12px; -unity-text-align: middle-center;" />
+            
+            <!-- Hidden legacy buttons -->
+            <ui:Button name="ClientButton" style="display: none;" />
+            <ui:Button name="ServerButton" style="display: none;" />
+        </ui:VisualElement>
+        
+    </ui:VisualElement>
+</ui:UXML>

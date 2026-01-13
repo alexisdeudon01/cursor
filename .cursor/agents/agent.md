@@ -52,151 +52,108 @@ Développer un jeu 2D client-serveur avec serveur **full authoritative** et arch
     "com.unity.burst": "1.x.x",
     "com.unity.mathematics": "1.x.x",
     "com.unity.inputsystem": "1.x.x",
-    "com.unity.ui": "2.x.x"
+    "com.unity.ui": "2.x.x",
+    "com.unity.render-pipelines.universal": "17.x.x"
   }
 }
 ```
 
-### Composants NGO à utiliser
+### Composants NGO existants dans le projet
 
-```csharp
-// ✅ CORRECT - Composants NGO
-using Unity.Netcode;
+Le projet contient déjà une architecture NGO complète :
 
-public class MyNetworkBehaviour : NetworkBehaviour
-{
-    // Variables synchronisées
-    private NetworkVariable<int> score = new();
-    
-    // Listes synchronisées
-    private NetworkList<PlayerData> players;
-    
-    // RPCs
-    [ServerRpc]
-    private void SendInputServerRpc(PlayerInputData input) { }
-    
-    [ClientRpc]
-    private void UpdateStateClientRpc(GameStateData state) { }
-}
 ```
-
-### NetworkManager - Configuration manuelle
-
-```csharp
-// ✅ CORRECT - Connexion directe IP
-var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-transport.SetConnectionData("192.168.1.1", 7777);
-NetworkManager.Singleton.StartClient();
-
-// ❌ INTERDIT - Unity Relay
-// RelayService.Instance.CreateAllocationAsync()  // NON !
-// NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData()  // NON !
-```
-
-### Lobby/Matchmaking - Implémentation custom
-
-```csharp
-// ✅ CORRECT - Lobby géré par le serveur autoritaire
-public struct LobbyData : INetworkSerializable
-{
-    public FixedString64Bytes lobbyName;
-    public int playerCount;
-    public int maxPlayers;
-    public bool isPublic;
-    
-    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
-    {
-        serializer.SerializeValue(ref lobbyName);
-        serializer.SerializeValue(ref playerCount);
-        serializer.SerializeValue(ref maxPlayers);
-        serializer.SerializeValue(ref isPublic);
-    }
-}
-
-// Le serveur gère les lobbies en mémoire
-private NetworkList<LobbyData> lobbies;
-
-// ❌ INTERDIT
-// LobbyService.Instance.CreateLobbyAsync()  // NON !
-// await Lobbies.Instance.QuickJoinLobbyAsync()  // NON !
+Assets/Scripts/Networking/
+├── Client/
+│   ├── ClientBootstrap.cs      ← Bootstrap client
+│   └── Client.asmdef
+├── Server/
+│   ├── ServerBootstrap.cs      ← Bootstrap serveur
+│   ├── ConnectionController.cs ← Gestion connexions
+│   └── Server.asmdef
+├── Connections/
+│   ├── NetworkBootstrap.cs     ← Bootstrap réseau principal
+│   ├── NetworkConfigProvider.cs
+│   └── AppNetworkConfig.cs
+├── Player/
+│   ├── SessionRpcHub.cs        ← Hub RPC principal
+│   ├── PlayerManager.cs
+│   └── NetworkClientRegistry.cs
+├── Sessions/
+│   ├── GameSessionManager.cs   ← Gestion des sessions
+│   ├── GameSession.cs
+│   └── SessionState.cs
+├── RpcHandlers/
+│   ├── Base/BaseRpcHandler.cs
+│   └── Handlers/
+│       ├── GameStartHandler.cs
+│       ├── PlayerMovementHandler.cs
+│       ├── SceneLoadHandler.cs
+│       ├── SessionLifecycleHandler.cs
+│       └── SessionQueryHandler.cs
+└── StateSync/
+    ├── GameCommandClient.cs
+    ├── SessionRegistry.cs
+    └── ClientRegistry.cs
 ```
 
 ---
 
 ## 4. Architecture UN SEUL BUILD
 
-### ⚠️ RÈGLE CRITIQUE : UN SEUL PROJET UNITY, UN SEUL BUILD
-
-La distinction Client/Serveur se fait par :
-1. **Arguments CLI** : `--server` ou `--client`
-2. **Scènes différentes** chargées au runtime
-
-### Structure des scènes
+### Structure des scènes existantes
 
 ```
 Assets/Scenes/
-├── ServerScene.unity      ← Chargée si --server
-├── MainMenu.unity         ← Chargée si --client (entrée)
-├── Lobby.unity            ← Client: sélection lobby
-├── Game.unity             ← Client: jeu en cours
-└── ...                    ← Autres scènes client
+├── Server.unity       ← Chargée si --server (headless)
+├── Client.unity       ← Chargée si --client (entrée)
+├── Menu.unity         ← Menu principal
+└── Game.unity         ← Scène de jeu
 ```
 
-### Logique de démarrage
+### Bootstrap existant
 
-```csharp
-void Start()
-{
-    if (IsServerMode())
-    {
-        // Charge UNIQUEMENT la scène serveur
-        SceneManager.LoadScene("ServerScene");
-        NetworkManager.Singleton.StartServer();  // ✅ PAS StartHost()
-    }
-    else
-    {
-        // Charge le menu client (graphique)
-        SceneManager.LoadScene("MainMenu");
-        // StartClient() appelé après saisie IP dans UI
-    }
-}
-```
+Le projet utilise déjà un système de bootstrap :
+- `ServerBootstrap.cs` : Démarre le serveur
+- `ClientBootstrap.cs` : Démarre le client
+- `NetworkBootstrap.cs` : Configuration réseau
 
 ---
 
 ## 5. Client Full Graphique - UI TOOLKIT
 
-### ⚠️ RÈGLE : Le client utilise EXCLUSIVEMENT UI Toolkit (UXML + USS)
+### ⚠️ RÈGLE : Le client utilise UI Toolkit (UXML + USS)
 
-**PAS de :**
-- ❌ Unity UI (Canvas, Button legacy)
-- ❌ IMGUI (OnGUI)
-- ❌ TextMeshPro standalone
-
-**UNIQUEMENT :**
-- ✅ UXML (structure)
-- ✅ USS (styles)
-- ✅ UIDocument component
-- ✅ VisualElement API en C#
-
-### Structure UI Toolkit
+Le projet contient déjà des fichiers UI Toolkit :
 
 ```
-Assets/UI/
-├── Styles/
-│   ├── MainTheme.uss
-│   └── Common.uss
-├── Templates/
-│   ├── MainMenu.uxml
-│   ├── Lobby.uxml
-│   ├── GameHUD.uxml
-│   └── Components/
-│       ├── PlayerCard.uxml
-│       └── LobbyItem.uxml
-└── Scripts/
-    ├── MainMenuController.cs
-    ├── LobbyController.cs
-    └── GameHUDController.cs
+Assets/UI Toolkit/
+├── ConnectionUI.uxml
+├── NetworkBootstrapOverlay.uxml
+├── NetworkBootstrapOverlay.uss
+├── NetworkBootstrapProgress.uxml
+├── SessionLobby.uxml
+├── SessionLobby.uss
+└── SessionLobby_FlowGuide.uss
+```
+
+### Scripts UI existants
+
+```
+Assets/Scripts/UI/
+├── ConnectionUIController.cs
+├── SessionLobbyUI.cs
+├── GameCanvasManager.cs
+├── ProgressIndicator.cs
+├── ToastNotification.cs
+├── Common/
+│   ├── UIManager.cs
+│   ├── PopupBase.cs
+│   ├── ConfirmPopup.cs
+│   └── InputPopup.cs
+└── NetworkBootstrap/
+    ├── NetworkBootstrapProgressViewClient.cs
+    └── NetworkBootstrapProgress.uss
 ```
 
 ---
@@ -204,7 +161,7 @@ Assets/UI/
 ## 6. Règles serveur
 
 ```csharp
-// ✅ CORRECT
+// ✅ CORRECT - Dans ServerBootstrap.cs
 NetworkManager.Singleton.StartServer();
 
 // ❌ INTERDIT
@@ -212,153 +169,128 @@ NetworkManager.Singleton.StartHost();  // Jamais !
 ```
 
 Le serveur :
-- Charge ServerScene uniquement
-- Valide tous les inputs
-- Simule la physique
-- Gère l'état du jeu (lobbies, parties, scores)
-- Gère le matchmaking en mémoire (pas de service externe)
+- Charge Server.unity uniquement
+- Valide tous les inputs via RpcHandlers
+- Gère les sessions via GameSessionManager
 - Aucun rendu graphique (headless possible)
 
 ---
 
 ## 7. Data-Oriented Design (DOD)
 
-### Structs pour données réseau
+### Structs existantes dans le projet
 
 ```csharp
-// ✅ CORRECT - Struct avec INetworkSerializable
-public struct PlayerInputData : INetworkSerializable
-{
-    public float moveX;
-    public float moveY;
-    public bool jump;
-    public bool action;
-    public uint tick;
-    
-    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
-    {
-        serializer.SerializeValue(ref moveX);
-        serializer.SerializeValue(ref moveY);
-        serializer.SerializeValue(ref jump);
-        serializer.SerializeValue(ref action);
-        serializer.SerializeValue(ref tick);
-    }
-}
+// Assets/Scripts/Networking/Data/
+PlayerNetworkData.cs   // Données joueur réseau
+ClientNetworkData.cs   // Données client
 
-// ❌ INTERDIT - Class pour données réseau
-public class PlayerInputData { }  // NON !
+// Assets/Scripts/Core/StateSync/
+GameCommandProtocol.cs // Protocole commandes
+MapConfigData.cs       // Configuration map
 ```
 
 ---
 
-## 8. Flux réseau (NGO natif)
+## 8. Prefabs réseau existants
 
 ```
-1. Client démarre → MainMenu.unity (UI Toolkit)
-2. Client saisit nom + IP serveur
-3. Client configure UnityTransport avec IP:Port
-4. Client appelle StartClient()
-5. OnClientConnected → Serveur envoie liste lobbies
-6. Client choisit/crée lobby (ServerRpc)
-7. Serveur valide et met à jour NetworkList<LobbyData>
-8. Partie démarre → Synchronisation via NetworkVariables
-9. Boucle: Input(ServerRpc) → Validation → État(ClientRpc) → Rendu
-```
+Assets/Prefabs/Network/
+├── NetworkManagerRoot.prefab   ← NetworkManager principal
+├── SessionRpcHub.prefab        ← Hub RPC
+├── NetworkBootstrapUI.prefab   ← UI bootstrap
+└── Square.prefab               ← Prefab test
 
----
-
-## 9. CLI
-
-```bash
-# Serveur (headless, pas de graphiques)
-./TheBestGame --server --port 7777
-
-# Client (full graphique UI Toolkit)
-./TheBestGame --client --ip 192.168.1.1 --port 7777
+Assets/Prefabs/Pawns/
+└── CirclePawn.prefab           ← Pawn joueur
 ```
 
 ---
 
-## 10. Packages autorisés à ajouter
+## 9. Games existants
 
-L'agent peut ajouter des packages **UNIQUEMENT** du Unity Registry officiel :
+Le projet supporte plusieurs types de jeux :
 
-```bash
-# ✅ AUTORISÉ (Unity Registry)
-com.unity.netcode.gameobjects
-com.unity.transport
-com.unity.collections
-com.unity.burst
-com.unity.mathematics
-com.unity.inputsystem
-com.unity.ui
-com.unity.textmeshpro
-com.unity.addressables
-com.unity.localization
-com.unity.cinemachine
-com.unity.2d.sprite
-com.unity.2d.tilemap
-com.unity.2d.animation
+```
+Assets/Scripts/Games/
+├── CircleGame/
+│   ├── CircleGameDefinition.cs
+│   └── CirclePawn.cs
+└── SquareGame/
+    └── SquareGameDefinition.cs
 
-# ❌ INTERDIT
-com.unity.services.*          # Unity Gaming Services
-com.unity.multiplayer.*       # Multiplayer Services
-Tout package OpenUPM
-Tout package GitHub externe
-Tout asset payant
+Assets/Resources/Games/
+├── CircleGame.asset
+└── SquareGame.asset
 ```
 
 ---
 
-## 11. Auto-Amélioration
-
-Cet agent s'améliore automatiquement via EvoAgentX :
-
-1. **Analyse** : Évalue le code vs ces règles
-2. **Score** : Calcule un score de conformité
-3. **Amélioration** : Propose des modifications
-4. **Validation** : Compare score avant/après
-5. **Rollback** : Annule si régression
+## 10. Auto-Amélioration
 
 ### Métriques d'évaluation
 
 | Métrique | Poids | Description |
 |----------|-------|-------------|
-| Server Authority | 20% | Pas de logique client, StartServer() |
+| Server Authority | 20% | StartServer(), pas StartHost() |
 | NGO Compliance | 20% | Netcode only, pas de services tiers |
 | Single Build | 10% | Un seul exécutable |
-| UI Toolkit | 15% | UXML + USS uniquement |
-| DOD Compliance | 15% | Structs pour données réseau |
-| Network Flow | 10% | Séquence correcte |
+| UI Toolkit | 15% | UXML + USS |
+| DOD Compliance | 15% | Structs INetworkSerializable |
+| Network Flow | 10% | Séquence correcte via RpcHandlers |
 | Build Success | 10% | Compilation OK |
 
----
-
-## 12. Ce que l'agent peut modifier
+### Ce que l'agent peut améliorer
 
 - ✅ Scripts C# dans Assets/Scripts/
-- ✅ Fichiers UXML dans Assets/UI/
-- ✅ Fichiers USS dans Assets/UI/
+- ✅ Fichiers UXML dans Assets/UI Toolkit/
+- ✅ Fichiers USS dans Assets/UI Toolkit/
 - ✅ Ce fichier agent.md (lui-même)
 - ✅ Packages/manifest.json (Unity Registry only)
-- ✅ Workflow CI/CD
 - ✅ Documentation
 - ❌ Fichiers Unity binaires (.unity, .prefab) - lecture seule
 - ❌ Services tiers - JAMAIS
 
----
-
-## 13. Checklist avant commit
+### Checklist avant commit
 
 - [ ] Pas de `StartHost()` → utilise `StartServer()`
 - [ ] Pas de `using Unity.Services.*`
-- [ ] Pas de Relay, Lobby Service, UGS
 - [ ] Données réseau = structs avec `INetworkSerializable`
-- [ ] UI = UXML + USS (pas de Canvas)
+- [ ] UI = UXML + USS
 - [ ] Packages = Unity Registry uniquement
-- [ ] Un seul build, distinction par CLI
 
 ---
 
-*Dernière mise à jour: $(date '+%Y-%m-%d %H:%M')*
+## 11. Structure du projet
+
+```
+Assets/
+├── Editor/                 ← Scripts éditeur
+├── Prefabs/
+│   ├── Network/           ← Prefabs réseau
+│   ├── Pawns/             ← Prefabs joueurs
+│   └── UI/                ← Prefabs UI
+├── Resources/
+│   ├── Games/             ← Définitions jeux
+│   └── NetworkConfig.asset
+├── Scenes/
+│   ├── Server.unity       ← Serveur headless
+│   ├── Client.unity       ← Client graphique
+│   ├── Menu.unity
+│   └── Game.unity
+├── Scripts/
+│   ├── Core/              ← Logique métier
+│   ├── Game/              ← Gameplay
+│   ├── Games/             ← Définitions jeux
+│   ├── Networking/        ← NGO complet
+│   ├── Service/           ← Services locaux
+│   └── UI/                ← Controllers UI
+├── Settings/              ← URP, Build Profiles
+├── TextMesh Pro/          ← Fonts
+└── UI Toolkit/            ← UXML + USS
+```
+
+---
+
+*Dernière mise à jour: AUTO_DATE*
 *Score actuel: AUTO_SCORE*

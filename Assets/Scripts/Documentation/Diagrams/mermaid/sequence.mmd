@@ -1,0 +1,46 @@
+---
+title: Session Join - Sequence Diagram
+---
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant RPC as SessionRpcHub
+    participant GSM as GameSessionManager
+    participant SCM as SessionContainerManager
+    participant SC as SessionContainer
+    
+    Note over C,SC: Phase 1 - Creation Session
+    C->>RPC: RequestCreateSessionServerRpc(gameId)
+    RPC->>GSM: CreateSession()
+    GSM->>SCM: CreateSession(sessionId, hostId)
+    SCM->>SC: new SessionContainer()
+    SC->>SC: AuthorizeClient(hostId)
+    SC-->>RPC: success
+    RPC-->>C: SessionCreatedClientRpc(sessionId)
+    
+    Note over C,SC: Phase 2 - Client 2 rejoint
+    participant C2 as Client 2
+    C2->>RPC: RequestJoinSessionServerRpc(sessionId)
+    RPC->>GSM: JoinSession(sessionId, clientId)
+    GSM->>SC: AuthorizeClient(clientId)
+    SC->>SC: AddPlayer(clientId)
+    RPC-->>C2: JoinSessionResultClientRpc(true)
+    RPC-->>C: PlayerJoinedClientRpc()
+    
+    Note over C,SC: Phase 3 - Lancement
+    C->>RPC: RequestStartGameServerRpc()
+    RPC->>GSM: StartGame()
+    GSM->>SCM: GetAuthorizedSession()
+    SCM->>SC: ValidateAccess()
+    GSM->>SC: SetState(InGame)
+    RPC-->>C: GameStartedClientRpc()
+    RPC-->>C2: GameStartedClientRpc()
+    
+    Note over C,SC: Phase 4 - Violation Securite
+    participant C3 as Attaquant
+    C3->>RPC: RequestJoinSessionServerRpc(otherSession)
+    RPC->>GSM: JoinSession()
+    GSM->>SCM: GetAuthorizedSession()
+    SCM->>SC: ValidateAccess() - DENIED
+    SCM-->>SCM: OnSecurityViolation
+    RPC-->>C3: JoinSessionResultClientRpc(false)

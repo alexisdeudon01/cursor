@@ -1,0 +1,37 @@
+---
+title: Session Lifecycle - Activity Diagram
+---
+flowchart TD
+    Start([Debut]) --> CheckHost{Host ou Client?}
+    
+    CheckHost -->|Host| CreateSession[Creer Session]
+    CheckHost -->|Client| RequestJoin[Demander Rejoindre]
+    
+    CreateSession --> InitContainer[Initialiser Container]
+    InitContainer --> AuthorizeHost[Autoriser Host]
+    AuthorizeHost --> WaitPlayers{Attendre Joueurs}
+    
+    RequestJoin --> ValidateClient{Valider Client?}
+    ValidateClient -->|Echec| End([Rejet])
+    ValidateClient -->|Succes| AuthorizePlayer[Autoriser Joueur]
+    
+    AuthorizePlayer --> AddToSession[Ajouter a Session]
+    AddToSession --> WaitPlayers
+    
+    WaitPlayers -->|Min atteint + Host lance| StartGame[Demarrer Jeu]
+    WaitPlayers -->|Timeout| Cleanup
+    
+    StartGame --> SpawnPawns[Spawn Pawns avec Offset]
+    SpawnPawns --> GameLoop{Game Loop}
+    
+    GameLoop -->|Joueur quitte| RemovePlayer[Retirer Joueur]
+    GameLoop -->|Fin partie| EndSession[Fin Session]
+    GameLoop -->|Continue| GameLoop
+    
+    RemovePlayer --> CheckPlayers{Reste joueurs?}
+    CheckPlayers -->|Oui| GameLoop
+    CheckPlayers -->|Non| EndSession
+    
+    EndSession --> Cleanup[Nettoyer]
+    Cleanup --> Dispose[Dispose Container]
+    Dispose --> End2([Fin])
