@@ -1,0 +1,114 @@
+name: Auto-Improve Project (Thebestclient)
+
+on:
+  # GitHub Actions "schedule" runs from the repository default branch (main).
+  # This workflow checks out and updates the dev branch on a schedule.
+  schedule:
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository (dev)
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -q requests mermaid-cli || echo "mermaid-cli non disponible, utilisation API en ligne"
+
+      - name: Run Auto-Improve Script with AI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Essayer d'abord avec IA, sinon fallback sur script basique
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "🤖 Utilisation de l'IA Claude pour amélioration..."
+            python3 .github/scripts/auto-improve-ai.py
+          else
+            echo "⚠️ Mode basique (pas d'IA) - configurez ANTHROPIC_API_KEY pour activer l'IA"
+            python3 .github/scripts/auto-improve.py
+          fi
+
+      - name: Verify Metrics Quality
+        run: |
+          echo "📊 Vérification des métriques de qualité..."
+          python3 .github/scripts/verify-metrics.py || echo "⚠️ Vérification métriques échouée (continue)"
+
+      - name: Generate UML Diagrams
+        run: |
+          VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
+          python3 .github/scripts/generate-uml-diagrams.py $VERSION
+
+      - name: Build Unity with Docker (Client + Server)
+        continue-on-error: true
+        run: |
+          echo "🐳 Build Unity avec Docker..."
+          echo "⚠️  Note: Unity nécessite une licence. Les builds peuvent échouer sans licence Unity."
+          echo ""
+
+          # Vérifier si Docker est disponible
+          if ! command -v docker &> /dev/null; then
+            echo "⚠️  Docker non disponible, skip des builds Unity"
+            exit 0
+          fi
+
+          # Build de l'image Docker Unity
+          echo "📦 Build de l'image Docker Unity..."
+          docker build -t unity-6000.3.0f1-builder -f Dockerfile . || {
+            echo "⚠️  Erreur build Docker image (peut nécessiter une licence Unity)"
+            exit 0
+          }
+
+          # Test build Client (optionnel, continue si échec)
+          echo ""
+          echo "🔨 Test build Client..."
+          docker run --rm \
+            -v $PWD:/workspace \
+            -w /workspace \
+            unity-6000.3.0f1-builder \
+            /usr/local/bin/build-unity.sh client || {
+            echo "⚠️  Build Client échoué (normal sans licence Unity)"
+          }
+
+          # Test build Serveur (optionnel, continue si échec)
+          echo ""
+          echo "🔨 Test build Serveur..."
+          docker run --rm \
+            -v $PWD:/workspace \
+            -w /workspace \
+            unity-6000.3.0f1-builder \
+            /usr/local/bin/build-unity.sh server || {
+            echo "⚠️  Build Serveur échoué (normal sans licence Unity)"
+          }
+
+          echo ""
+          echo "✅ Tests de compilation Docker terminés (peuvent avoir échoué sans licence Unity)"
+
+      - name: Commit and Push Changes (to dev)
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --staged --quiet || git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
+          git push origin dev || echo "No changes to push"
