@@ -274,3 +274,16 @@ Thumbs.db
 .github/API_KEY_LOCAL.txt
 .github/KEYS.txt
 .github/KEYS.txt
+# === SÉCURITÉ: Fichiers sensibles ===
+.env
+.env.*
+.env.local
+*.pem
+*.key
+id_ed25519*
+id_rsa*
+KEYS.txt
+secrets.txt
+credentials.txt
+.logs/
+*.backup.*
