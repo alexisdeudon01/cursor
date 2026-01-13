@@ -19,6 +19,8 @@ jobs:
   improve:
     name: 🤖 Auto-Amélioration
     runs-on: ubuntu-latest  # ← RUNNER GRATUIT (2 cores)
+    env:
+      SKIP_PNG_CONVERSION: "true"
     timeout-minutes: 60
     
     steps:
