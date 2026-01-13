@@ -1,26 +1,27 @@
 # Analyse Auto-Improve avec IA - Version 9
-**Date**: 2026-01-13 16:05:04
+**Date**: 2026-01-13 16:08:07
 **Branche**: dev
 **Exécution**: GitHub Actions avec IA Claude
 
 ## Analyse effectuée par IA
 
 ### Findings
-- **architecture** (critical): Duplication de StateMachine dans Core/ et Core/Patterns/ - risque de conflits et confusion
-- **modularity** (important): SessionContainerManager et GameInstanceManager ont des responsabilités qui se chevauchent - violation SRP
-- **network** (important): MapConfigData dans StateSync sans interface - difficile à étendre pour nouveaux types de maps
-- **architecture** (minor): HeadlessEntitiesBootstrap manque de documentation sur le cycle de vie
+- **architecture** (critical): Duplication critique: Assets/Scripts/Core/StateMachine.cs et Assets/Scripts/Core/Patterns/StateMachine.cs - risque de conflits et confusion
+- **modularity** (important): SessionContainer et SessionContainerManager semblent avoir des responsabilités qui se chevauchent - violer le principe de responsabilité unique
+- **architecture** (important): HeadlessEntitiesBootstrap dans Core/ mais semble spécifique au serveur - devrait être dans Server/
+- **network** (minor): MapConfigData dans StateSync/ mais pas d'autres composants de synchronisation visible - structure incomplète
 
 ### Améliorations proposées
-- **refactor**: Consolider les StateMachine - supprimer duplication et créer interface commune
-- **code_change**: Créer interface IMapConfig pour extensibilité des types de maps
-- **refactor**: Séparer responsabilités SessionContainerManager - créer SessionLifecycleManager
-- **documentation**: Ajouter documentation architecture et cycle de vie
+- **refactor**: Consolider les StateMachine en une seule implémentation dans Patterns/
+- **code_change**: Déplacer HeadlessEntitiesBootstrap vers Server/ et créer une interface IBootstrap
+- **refactor**: Restructurer SessionContainer/Manager avec pattern Facade
+- **code_change**: Créer système StateSync complet avec interfaces
+- **documentation**: Créer documentation architecture avec diagrammes
 
 ### Modularité
-- **Games**: ok - GameRegistry + IGameDefinition permettent ajout facile de nouveaux jeux. Factory pattern bien implémenté.
-- **Sessions**: needs_improvement - SessionContainer OK mais manager trop couplé. Besoin séparation lifecycle/container management.
-- **Maps**: needs_improvement - MapConfigData rigide - besoin interface IMapConfig pour support multi-types (2D/3D/procedural).
+- **Games**: ok - GameRegistry + IGameDefinition permettent l'ajout facile de nouveaux jeux. Pattern bien conçu.
+- **Sessions**: needs_improvement - SessionContainer/Manager overlap crée confusion. Refactoring recommandé avec pattern Facade.
+- **Maps**: needs_improvement - MapConfigData isolé, manque système complet de gestion des maps. Créer MapRegistry similaire à GameRegistry.
 
 ---
 **Généré automatiquement par IA (Claude) via GitHub Actions**
