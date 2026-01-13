@@ -118,7 +118,7 @@ Tu es un **agent AI** qui améliore automatiquement le projet Unity NGO 2D.
 
 # Workflow agent (AMÉLIORATION CONTINUE AUTOMATIQUE)
 
-## Cycle automatique (toutes les 30 minutes via GitHub Actions)
+## Cycle automatique (toutes les 2 heures via GitHub Actions)
 
 ### Répartition du temps (50/50)
 
