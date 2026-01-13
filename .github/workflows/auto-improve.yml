@@ -57,6 +57,11 @@ jobs:
             python3 .github/scripts/auto-improve.py
           fi
           
+      - name: Verify Metrics Quality
+        run: |
+          echo "📊 Vérification des métriques de qualité..."
+          python3 .github/scripts/verify-metrics.py || echo "⚠️ Vérification métriques échouée (continue)"
+          
       - name: Generate UML Diagrams
         run: |
           VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
