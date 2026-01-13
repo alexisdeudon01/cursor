@@ -6,6 +6,16 @@ on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
+  # Keep this workflow definition compatible with dev/main by also supporting
+  # running on dev changes (useful when iterating on agents/assets).
+  push:
+    branches:
+      - dev
+    paths:
+      - '.cursor/agents/**'
+      - 'Assets/Scripts/**'
+      - 'Assets/Scenes/**'
+      - 'Assets/Prefabs/**'
 
 jobs:
   improve:
@@ -106,9 +116,30 @@ jobs:
           echo "✅ Tests de compilation Docker terminés (peuvent avoir échoué sans licence Unity)"
 
       - name: Commit and Push Changes (to dev)
+        if: github.event_name != 'pull_request'
         run: |
+          set -euo pipefail
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
           git add -A
-          git diff --staged --quiet || git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
-          git push origin dev || echo "No changes to push"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
+
+          # Multiple scheduled/push runs can race and update dev concurrently.
+          # Rebase & retry to avoid "rejected (fetch first)" and ensure changes land.
+          for attempt in 1 2 3 4; do
+            if git push origin dev; then
+              exit 0
+            fi
+            echo "Push rejected; rebasing on origin/dev and retrying (attempt $attempt/4)..."
+            git pull --rebase --autostash origin dev
+          done
+
+          echo "ERROR: failed to push to dev after 4 attempts"
+          exit 1
