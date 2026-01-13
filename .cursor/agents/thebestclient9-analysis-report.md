@@ -1,28 +1,27 @@
 # Analyse Auto-Improve avec IA - Version 9
-**Date**: 2026-01-13 17:14:10
+**Date**: 2026-01-13 17:29:34
 **Branche**: dev
 **Exécution**: GitHub Actions avec IA Claude
 
 ## Analyse effectuée par IA
 
 ### Findings
-- **architecture** (important): StateMachine existe en double (Core/StateMachine.cs et Core/Patterns/StateMachine.cs) créant une confusion architecturale
-- **modularity** (critical): SessionContainerManager manque d'interfaces pour découplage et extensibilité
-- **network** (important): MapConfigData manque de validation réseau et sérialisation optimisée
-- **architecture** (minor): HeadlessEntitiesBootstrap pourrait bénéficier d'un pattern d'injection de dépendance
-- **modularity** (important): GameRegistry manque de mécanisme de chargement dynamique pour nouveaux jeux
+- **architecture** (critical): Duplication de StateMachine - deux implémentations dans Assets/Scripts/Core/ et Assets/Scripts/Core/Patterns/
+- **modularity** (important): SessionContainerManager et SessionContainer ont des responsabilités qui se chevauchent, violant le principe de responsabilité unique
+- **architecture** (important): HeadlessEntitiesBootstrap manque d'interface pour permettre le polymorphisme et les tests
+- **network** (minor): MapConfigData pourrait bénéficier d'une validation des données réseau
 
 ### Améliorations proposées
-- **refactor**: Consolider StateMachine en une seule implémentation générique dans Core/Patterns
-- **code_change**: Ajouter interface ISessionManager pour découpler SessionContainerManager
-- **code_change**: Améliorer MapConfigData avec validation et sérialisation réseau
-- **code_change**: Ajouter système de chargement dynamique de jeux dans GameRegistry
-- **code_change**: Ajouter système d'injection de dépendance pour HeadlessEntitiesBootstrap
+- **refactor**: Fusionner les deux implémentations StateMachine en une seule dans Core/Patterns/ avec interface générique
+- **code_change**: Ajouter interface IBootstrap pour HeadlessEntitiesBootstrap
+- **refactor**: Refactoriser SessionContainer et SessionContainerManager pour une séparation claire des responsabilités
+- **code_change**: Ajouter validation et sérialisation robuste pour MapConfigData
+- **documentation**: Ajouter documentation XML pour toutes les interfaces publiques
 
 ### Modularité
-- **Games**: needs_improvement - GameRegistry existe mais manque de chargement dynamique. IGameDefinition est bien défini. Ajout de nouveau jeu nécessite modification manuelle du registry.
-- **Sessions**: needs_improvement - SessionContainerManager fonctionne mais manque d'interface pour découplage. Modularité limitée par couplage fort avec NetworkBehaviour.
-- **Maps**: ok - MapConfigData est modulaire et extensible. Structure permettant ajout facile de nouvelles maps.
+- **Games**: ok - GameRegistry et IGameDefinition permettent l'ajout facile de nouveaux jeux. Factory pattern bien implémenté.
+- **Sessions**: needs_improvement - Architecture SessionContainer/Manager à refactoriser. Manque d'interfaces pour l'extensibilité et les tests.
+- **Maps**: ok - MapConfigData structure correcte mais nécessite validation réseau. Système extensible pour nouveaux types de maps.
 
 ---
 **Généré automatiquement par IA (Claude) via GitHub Actions**
