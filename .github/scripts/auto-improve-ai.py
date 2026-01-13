@@ -52,7 +52,7 @@ def call_claude_api(prompt: str, system_prompt: str = None) -> Optional[str]:
     url = "https://api.anthropic.com/v1/messages"
     headers = {
         "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2024-06-20",  # Version API mise à jour (était 2023-06-01)
+        "anthropic-version": "2023-06-01",  # ✅ Version correcte
         "content-type": "application/json"
     }
     
@@ -76,6 +76,15 @@ def call_claude_api(prompt: str, system_prompt: str = None) -> Optional[str]:
         if e.response.status_code == 401:
             print(f"❌ Erreur API Claude: 401 - Clé API invalide ou expirée")
             print(f"   💡 Vérifiez ANTHROPIC_API_KEY dans GitHub Secrets")
+        elif e.response.status_code == 400:
+            print(f"❌ Erreur API Claude: 400 - Requête invalide")
+            print(f"   💡 Vérifiez le format de la requête")
+            # Afficher plus de détails pour debug
+            try:
+                error_detail = e.response.json()
+                print(f"   📋 Détail: {error_detail}")
+            except:
+                pass
         else:
             print(f"❌ Erreur API Claude: {e.response.status_code} - {e}")
         return None
