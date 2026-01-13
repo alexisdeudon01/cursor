@@ -1,211 +1,249 @@
 name: Auto-Improve (EvoAgentX)
 
-# ═══════════════════════════════════════════════════════════════════════════
-# CONFIGURATION: 1 HEURE INTERVAL + 4-CORE RUNNER
-# ═══════════════════════════════════════════════════════════════════════════
-# Coût estimé: ~$346/mois (720 runs × ~$0.48/run)
-# Temps par run: ~30-35 min
-# ═══════════════════════════════════════════════════════════════════════════
-
 on:
   schedule:
-    - cron: '0 * * * *'  # Toutes les heures (minute 0)
-  workflow_dispatch:      # Déclenchement manuel
+    - cron: '0 */6 * * *'  # Toutes les 6 heures (économique)
+  workflow_dispatch:       # Manuel
   push:
     branches: [main]
-    paths: ['Assets/**', '.cursor/agents/**']
+    paths:
+      - 'Assets/Scripts/**'
+      - '.cursor/agents/**'
 
-concurrency:
-  group: auto-improve
-  cancel-in-progress: true
-
-env:
-  PYTHONUNBUFFERED: "1"
+# Permissions
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   improve:
-    runs-on: ubuntu-latest-4-cores  # 4 vCPU, 16 GB RAM - $0.016/min
-    timeout-minutes: 55              # 55 min max (marge de sécurité)
-    permissions:
-      contents: write
-
+    name: 🤖 Auto-Amélioration
+    runs-on: ubuntu-latest  # ← RUNNER GRATUIT (2 cores)
+    timeout-minutes: 60
+    
     steps:
-      # ═══════════════════════════════════════════════════════════════
+      # ═══════════════════════════════════════════════════════════════════
       # SETUP
-      # ═══════════════════════════════════════════════════════════════
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
-          docker system prune -af || true
-
-      - name: Checkout
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Python
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: Install Dependencies
+      - name: 📦 Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install evoagentx requests pyyaml
+          echo "═══════════════════════════════════════════════════════════"
+          echo "📦 INSTALLATION DES DÉPENDANCES"
+          echo "═══════════════════════════════════════════════════════════"
+          pip install requests anthropic
+          echo "✅ Dépendances installées"
 
-      - name: Cache Unity Library
-        uses: actions/cache@v4
-        with:
-          path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**') }}
-          restore-keys: Library-
-
-      # ═══════════════════════════════════════════════════════════════
-      # SAVE STATE BEFORE (pour rollback)
-      # ═══════════════════════════════════════════════════════════════
-      - name: Save State Before
-        id: before
+      # ═══════════════════════════════════════════════════════════════════
+      # PHASE 1: ANALYSE
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 📊 Phase 1 - Analyse du projet
         run: |
-          COMMIT_BEFORE=$(git rev-parse HEAD)
-          echo "commit=$COMMIT_BEFORE" >> $GITHUB_OUTPUT
-          
-          # Copier les fichiers importants
-          mkdir -p /tmp/state-before
-          cp -r Assets/Scripts /tmp/state-before/ 2>/dev/null || true
-          cp .cursor/agents/agent.md /tmp/state-before/ 2>/dev/null || true
-          
-          echo "✅ État sauvegardé: $COMMIT_BEFORE"
-
-      # ═══════════════════════════════════════════════════════════════
-      # PHASE 1: MÉTRIQUES PAR CLAUDE
-      # ═══════════════════════════════════════════════════════════════
-      - name: Generate Metrics (Claude)
-        id: metrics
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 .github/scripts/generate_metrics.py
-
-      # ═══════════════════════════════════════════════════════════════
-      # PHASE 2: EVOAGENTX WORKFLOW
-      # ═══════════════════════════════════════════════════════════════
-      - name: Run EvoAgentX
-        id: evoagentx
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 .github/scripts/evoagentx_improve.py
-
-      # ═══════════════════════════════════════════════════════════════
-      # PHASE 3: ÉVALUATION POST-AMÉLIORATION
-      # ═══════════════════════════════════════════════════════════════
-      - name: Evaluate Changes
-        id: evaluate
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 .github/scripts/evaluate_changes.py
-
-      # ═══════════════════════════════════════════════════════════════
-      # PHASE 4: ROLLBACK SI RÉGRESSION
-      # ═══════════════════════════════════════════════════════════════
-      - name: Rollback if Worse
-        if: steps.evaluate.outputs.should_rollback == 'true'
-        run: |
-          echo "⚠️ RÉGRESSION DÉTECTÉE - ROLLBACK"
-          echo "Score avant: ${{ steps.evaluate.outputs.score_before }}"
-          echo "Score après: ${{ steps.evaluate.outputs.score_after }}"
-          
-          # Restaurer les fichiers
-          cp -r /tmp/state-before/Scripts Assets/ 2>/dev/null || true
-          cp /tmp/state-before/agent.md .cursor/agents/ 2>/dev/null || true
-          
-          # Marquer le rollback
-          echo "ROLLBACK at $(date)" >> .github/reports/rollback-history.txt
-          
-          echo "✅ Rollback effectué"
-
-      # ═══════════════════════════════════════════════════════════════
-      # PHASE 5: BUILD UNITY
-      # ═══════════════════════════════════════════════════════════════
-      - name: Build Unity
-        id: unity-build
-        uses: game-ci/unity-builder@v4
-        continue-on-error: true
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          targetPlatform: StandaloneLinux64
-          buildName: TheBestGame
-          buildsPath: Build
-          unityVersion: 6000.0.23f1
-
-      # ═══════════════════════════════════════════════════════════════
-      # PHASE 6: ROLLBACK SI BUILD ÉCHOUE
-      # ═══════════════════════════════════════════════════════════════
-      - name: Rollback if Build Failed
-        if: steps.unity-build.outcome == 'failure'
-        run: |
-          echo "❌ BUILD ÉCHOUÉ - ROLLBACK"
-          
-          # Restaurer
-          cp -r /tmp/state-before/Scripts Assets/ 2>/dev/null || true
-          cp /tmp/state-before/agent.md .cursor/agents/ 2>/dev/null || true
-          
-          echo "BUILD_FAILED at $(date)" >> .github/reports/rollback-history.txt
-          echo "✅ Rollback effectué"
-
-      # ═══════════════════════════════════════════════════════════════
-      # UPLOAD & COMMIT
-      # ═══════════════════════════════════════════════════════════════
-      - name: Upload Build
-        if: steps.unity-build.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: TheBestGame-${{ github.run_number }}
-          path: Build/StandaloneLinux64
-          retention-days: 7
-
-      - name: Update Agent Version
-        run: |
-          # Incrémenter version dans agent.md
-          VERSION=$(grep -oP 'Version\*\*: \K[0-9]+\.[0-9]+\.[0-9]+' .cursor/agents/agent.md || echo "1.0.0")
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-          
-          sed -i "s/Version\*\*: $VERSION/Version**: $NEW_VERSION/g" .cursor/agents/agent.md
-          sed -i "s/AUTO_DATE/$(date '+%Y-%m-%d %H:%M')/g" .cursor/agents/agent.md
-          
-          echo "📌 Version: $VERSION → $NEW_VERSION"
-
-      - name: Commit Changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # Tag pour rollback facile
-          git tag -a "pre-improve-${{ github.run_number }}" -m "Before improvement #${{ github.run_number }}" 2>/dev/null || true
-          
-          echo -e "Build/\nLibrary/\nTemp/\nLogs/" >> .gitignore
-          
-          git add -A
-          git reset -- Build/ Library/ Temp/ Logs/
-          
-          if git diff --staged --quiet; then
-            echo "✅ Pas de changements"
-            exit 0
+          echo "═══════════════════════════════════════════════════════════"
+          echo "📊 PHASE 1: ANALYSE DU PROJET"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          echo "📁 Structure du projet:"
+          echo "------------------------"
+          find Assets -type f -name "*.cs" | wc -l | xargs echo "   Scripts C#:"
+          find Assets -type f -name "*.unity" | wc -l | xargs echo "   Scènes:"
+          find Assets -type f -name "*.prefab" | wc -l | xargs echo "   Prefabs:"
+          find Assets -type f -name "*.uxml" | wc -l | xargs echo "   UXML:"
+          find Assets -type f -name "*.uss" | wc -l | xargs echo "   USS:"
+          echo ""
+          echo "📄 Agent:"
+          echo "------------------------"
+          if [ -f ".cursor/agents/agent.md" ]; then
+            head -30 .cursor/agents/agent.md
+            echo "..."
+            echo "✅ Agent trouvé ($(wc -l < .cursor/agents/agent.md) lignes)"
+          else
+            echo "⚠️ Agent non trouvé!"
           fi
+          echo ""
+          echo "🔌 Scripts réseau:"
+          echo "------------------------"
+          ls -la Assets/Scripts/Networking/ 2>/dev/null || echo "   Dossier Networking non trouvé"
+          echo ""
+
+      # ═══════════════════════════════════════════════════════════════════
+      # PHASE 2: VÉRIFICATION API
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 🔑 Phase 2 - Vérification API Anthropic
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "🔑 PHASE 2: VÉRIFICATION API"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ ANTHROPIC_API_KEY non définie!"
+            echo "   → Va dans Settings > Secrets > Actions"
+            echo "   → Ajoute ANTHROPIC_API_KEY"
+            echo ""
+            echo "⚠️ Mode dégradé activé (pas d'IA)"
+            echo "MODE=basic" >> $GITHUB_ENV
+          else
+            echo "✅ ANTHROPIC_API_KEY détectée"
+            echo "   Longueur: ${#ANTHROPIC_API_KEY} caractères"
+            echo "   Préfixe: ${ANTHROPIC_API_KEY:0:10}..."
+            echo ""
+            echo "🧪 Test de connexion API..."
+            python3 << 'PYEOF'
+import os
+import requests
+
+API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+try:
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        },
+        json={
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 10,
+            "messages": [{"role": "user", "content": "ping"}]
+        },
+        timeout=30
+    )
+    if response.status_code == 200:
+        print("✅ API Anthropic: OK")
+        print(f"   Réponse: {response.json()['content'][0]['text'][:50]}")
+    elif response.status_code == 401:
+        print("❌ API Anthropic: Clé invalide (401)")
+    elif response.status_code == 429:
+        print("⚠️ API Anthropic: Rate limit (429)")
+    else:
+        print(f"⚠️ API Anthropic: Status {response.status_code}")
+except requests.exceptions.Timeout:
+    print("❌ API Anthropic: Timeout (30s)")
+except Exception as e:
+    print(f"❌ API Anthropic: Erreur - {e}")
+PYEOF
+            echo "MODE=ai" >> $GITHUB_ENV
+          fi
+
+      # ═══════════════════════════════════════════════════════════════════
+      # PHASE 3: GÉNÉRATION MÉTRIQUES
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 📈 Phase 3 - Génération des métriques
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "📈 PHASE 3: GÉNÉRATION DES MÉTRIQUES"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          mkdir -p .github/reports
+          python3 .github/scripts/generate_metrics.py
+          echo ""
+          echo "📄 Métriques générées:"
+          echo "------------------------"
+          if [ -f ".github/reports/current_metrics.json" ]; then
+            cat .github/reports/current_metrics.json
+          else
+            echo "⚠️ Fichier métriques non créé"
+          fi
+
+      # ═══════════════════════════════════════════════════════════════════
+      # PHASE 4: AMÉLIORATION
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 🤖 Phase 4 - Amélioration via EvoAgentX
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "🤖 PHASE 4: AMÉLIORATION VIA EVOAGENTX"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          python3 .github/scripts/evoagentx_improve.py
+          echo ""
+          echo "📄 Rapport d'amélioration:"
+          echo "------------------------"
+          if [ -f ".github/reports/improvement_analysis.json" ]; then
+            cat .github/reports/improvement_analysis.json
+          fi
+
+      # ═══════════════════════════════════════════════════════════════════
+      # PHASE 5: ÉVALUATION
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 📊 Phase 5 - Évaluation des changements
+        id: evaluate
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "📊 PHASE 5: ÉVALUATION DES CHANGEMENTS"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          python3 .github/scripts/evaluate_changes.py
+          echo ""
+          echo "📄 Fichiers modifiés:"
+          echo "------------------------"
+          git status --short
+          echo ""
+          CHANGES=$(git status --porcelain | wc -l)
+          echo "has_changes=$([[ $CHANGES -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "   Total: $CHANGES fichiers"
+
+      # ═══════════════════════════════════════════════════════════════════
+      # PHASE 6: COMMIT
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 💾 Phase 6 - Commit des améliorations
+        if: steps.evaluate.outputs.has_changes == 'true'
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "💾 PHASE 6: COMMIT DES AMÉLIORATIONS"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          git config user.name "EvoAgentX Bot"
+          git config user.email "bot@evoagentx.ai"
+          git add -A
           
-          SCORE="${{ steps.evaluate.outputs.score_after }}"
-          git commit -m "🤖 Auto-improve #${{ github.run_number }} (score: ${SCORE:-N/A}) [skip ci]"
+          # Créer message de commit avec score
+          SCORE=$(cat .github/reports/current_metrics.json 2>/dev/null | grep -o '"total_score":[0-9]*' | grep -o '[0-9]*' || echo "N/A")
           
-          # Push avec retry
-          for i in 1 2 3; do
-            git push origin main --tags && exit 0
-            git pull --rebase origin main
-            sleep 2
-          done
+          git commit -m "🤖 Auto-improve #${{ github.run_number }} [skip ci]
+
+Score: $SCORE
+Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          git push origin main
+          echo ""
+          echo "✅ Changements poussés sur main"
+
+      - name: ⏭️ Pas de changements
+        if: steps.evaluate.outputs.has_changes != 'true'
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "ℹ️ PAS DE CHANGEMENTS À COMMITER"
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          echo "Le code est déjà conforme aux règles de l'agent."
+
+      # ═══════════════════════════════════════════════════════════════════
+      # RÉSUMÉ
+      # ═══════════════════════════════════════════════════════════════════
+      - name: 📋 Résumé
+        if: always()
+        run: |
+          echo ""
+          echo "╔═══════════════════════════════════════════════════════════╗"
+          echo "║                    📋 RÉSUMÉ                              ║"
+          echo "╠═══════════════════════════════════════════════════════════╣"
+          echo "║  Run: #${{ github.run_number }}"
+          echo "║  Mode: ${{ env.MODE || 'unknown' }}"
+          echo "║  Durée: $(date)"
+          echo "╚═══════════════════════════════════════════════════════════╝"
