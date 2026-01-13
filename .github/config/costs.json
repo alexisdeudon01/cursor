@@ -3,18 +3,11 @@
     "anthropic": {
       "claude-sonnet-4": {
         "input_per_1k_tokens": 0.003,
-        "output_per_1k_tokens": 0.015,
-        "currency": "USD"
-      },
-      "claude-haiku": {
-        "input_per_1k_tokens": 0.00025,
-        "output_per_1k_tokens": 0.00125,
-        "currency": "USD"
+        "output_per_1k_tokens": 0.015
       }
     },
     "github_actions": {
-      "ubuntu_latest_per_minute": 0.008,
-      "currency": "USD"
+      "ubuntu_latest_per_minute": 0.008
     },
     "exchange_rate": {
       "USD_to_EUR": 0.92
