@@ -1,0 +1,36 @@
+{
+  "pricing": {
+    "anthropic": {
+      "claude-sonnet-4": {
+        "input_per_1k_tokens": 0.003,
+        "output_per_1k_tokens": 0.015,
+        "currency": "USD"
+      },
+      "claude-haiku": {
+        "input_per_1k_tokens": 0.00025,
+        "output_per_1k_tokens": 0.00125,
+        "currency": "USD"
+      }
+    },
+    "github_actions": {
+      "ubuntu_latest_per_minute": 0.008,
+      "currency": "USD"
+    },
+    "exchange_rate": {
+      "USD_to_EUR": 0.92
+    }
+  },
+  "totals": {
+    "anthropic_input_tokens": 0,
+    "anthropic_output_tokens": 0,
+    "anthropic_cost_usd": 0,
+    "github_minutes": 0,
+    "github_cost_usd": 0,
+    "total_cost_usd": 0,
+    "total_cost_eur": 0,
+    "total_runs": 0,
+    "first_run": null,
+    "last_run": null
+  },
+  "history": []
+}
