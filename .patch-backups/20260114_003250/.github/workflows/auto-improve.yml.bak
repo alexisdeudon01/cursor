@@ -1,0 +1,144 @@
+name: Auto-Improve
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: auto-improve-global
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔄 Sync (safe)
+        run: |
+          git config user.name "EvoAgentX Bot"
+          git config user.email "bot@evoagentx.ai"
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Deps
+        run: pip install -U requests anthropic
+
+      - name: ⏱️ Timer
+        id: timer
+        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: 💸 Budget guard (pre)
+        id: budget
+        run: |
+          mkdir -p .github/budget
+          FILE=.github/budget/monthly_eur.txt
+          CUR=0
+          [ -f "$FILE" ] && CUR=$(cat "$FILE")
+          echo "current=$CUR" >> $GITHUB_OUTPUT
+          if awk "BEGIN{exit !($CUR>=200)}"; then
+            echo "skip_heavy=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_heavy=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Budget mois: €$CUR (cap €200)"
+
+      - name: 📊 Analyse
+        run: |
+          echo "═══════════════════════════════════"
+          echo "📊 ANALYSE"
+          echo "═══════════════════════════════════"
+          find Assets -name "*.cs" 2>/dev/null | wc -l | xargs echo "C#:"
+          find Assets -name "*.unity" 2>/dev/null | wc -l | xargs echo "Scenes:"
+
+      - name: Generate UML Diagrams
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+        run: |
+          echo "📐 Génération Mermaid"
+          python3 .github/scripts/generate-uml-diagrams.py 1
+
+      - name: 🔑 API Mode
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "MODE=ai" >> $GITHUB_ENV
+          else
+            echo "MODE=basic" >> $GITHUB_ENV
+          fi
+
+      - name: 📈 Metrics
+        run: |
+          mkdir -p .github/reports
+          if [ -f .github/scripts/generate_metrics.py ]; then
+            python3 .github/scripts/generate_metrics.py
+          else
+            echo '{}' > .github/reports/current_metrics.json
+          fi
+
+      - name: 🤖 Improve
+        if: steps.budget.outputs.skip_heavy != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -f .github/scripts/evoagentx_improve.py ]; then
+            python3 .github/scripts/evoagentx_improve.py
+          else
+            echo "No improve script"
+          fi
+
+      - name: 📊 Eval
+        id: eval
+        run: |
+          if [ -f .github/scripts/evaluate_changes.py ]; then
+            python3 .github/scripts/evaluate_changes.py || true
+          fi
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 💾 Commit
+        if: steps.eval.outputs.changes == 'true'
+        run: |
+          git add -A
+          git commit -m "🤖 Auto #${{ github.run_number }} [skip ci]" || true
+          git push origin main || true
+
+      - name: 💰 Costs (post)
+        if: always()
+        run: |
+          END=$(date +%s)
+          START=${{ steps.timer.outputs.start }}
+          MINS=$(awk "BEGIN {printf \"%.1f\", ($END-$START)/60}")
+          RATE_EUR_PER_MIN=0.01
+          COST=$(awk "BEGIN {printf \"%.2f\", $MINS*$RATE_EUR_PER_MIN}")
+          mkdir -p .github/budget
+          FILE=.github/budget/monthly_eur.txt
+          CUR=0
+          [ -f "$FILE" ] && CUR=$(cat "$FILE")
+          NEW=$(awk "BEGIN {printf \"%.2f\", $CUR+$COST}")
+          echo "$NEW" > "$FILE"
+          echo "⏱️ Run minutes: $MINS"
+          echo "💶 Estimated run cost: €$COST (rate €$RATE_EUR_PER_MIN/min)"
+          echo "📆 Monthly total: €$NEW / €200"
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "Run #${{ github.run_number }} - ${{ job.status }}"
