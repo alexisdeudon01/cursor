@@ -2,8 +2,8 @@ name: Auto-Improve Project (Thebestclient)
 
 on:
   schedule:
-    # Exécute toutes les 2 heures (au lieu de 30 minutes pour réduire les coûts)
-    - cron: '0 */2 * * *'
+    # Exécute toutes les 15 minutes.
+    - cron: '*/15 * * * *'
   workflow_dispatch: # Permet de lancer manuellement
   push:
     branches:
@@ -115,8 +115,28 @@ jobs:
       - name: Commit and Push Changes
         if: github.event_name != 'pull_request'
         run: |
+          set -euo pipefail
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
           git add -A
-          git diff --staged --quiet || git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
-          git push origin dev || echo "No changes to push"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
+
+          # Multiple scheduled/push runs can race and update dev concurrently.
+          # Rebase & retry to avoid "rejected (fetch first)" and ensure changes land.
+          for attempt in 1 2 3 4; do
+            if git push origin dev; then
+              exit 0
+            fi
+            echo "Push rejected; rebasing on origin/dev and retrying (attempt $attempt/4)..."
+            git pull --rebase --autostash origin dev
+          done
+
+          echo "ERROR: failed to push to dev after 4 attempts"
+          exit 1
