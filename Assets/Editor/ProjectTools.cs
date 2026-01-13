@@ -194,9 +194,9 @@ public static class ProjectTools
         if (File.Exists(serverAsmdef))
         {
             string content = File.ReadAllText(serverAsmdef);
-            if (content.Contains("\"Server\""))
+            if (content.Contains("\"Server\"))
             {
-                content = content.Replace("\"Server\"", "\"LinuxStandalone64Server\", \"WindowsStandalone64Server\"");
+                content = content.Replace("\"Server\", "\"LinuxStandalone64Server\");
                 File.WriteAllText(serverAsmdef, content);
                 Debug.Log("[ProjectTools] ✅ Server.asmdef corrigé");
                 wasFixed = true;
@@ -208,10 +208,10 @@ public static class ProjectTools
         if (File.Exists(clientAsmdef))
         {
             string content = File.ReadAllText(clientAsmdef);
-            if (content.Contains("\"Server\""))
+            if (content.Contains("\"Server\"))
             {
                 // Client doit exclure les plateformes serveur
-                content = content.Replace("\"Server\"", "\"LinuxStandalone64Server\", \"WindowsStandalone64Server\"");
+                content = content.Replace("\"Server\", "\"LinuxStandalone64Server\");
                 File.WriteAllText(clientAsmdef, content);
                 Debug.Log("[ProjectTools] ✅ Client.asmdef corrigé");
                 wasFixed = true;
@@ -320,7 +320,7 @@ public static class ProjectTools
         ProcessStartInfo chmodInfo = new ProcessStartInfo
         {
             FileName = "/bin/chmod",
-            Arguments = $"+x \"{scriptPath}\"",
+            Arguments = $"+x \"{scriptPath}\",
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -331,7 +331,7 @@ public static class ProjectTools
         ProcessStartInfo psi = new ProcessStartInfo
         {
             FileName = "/bin/bash",
-            Arguments = $"\"{scriptPath}\"",
+            Arguments = $"\"{scriptPath}\",
             UseShellExecute = true,
             WorkingDirectory = projectPath
         };
