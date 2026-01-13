@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  unity-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: unity-6000.3.0f1-builder
+    container_name: unity-builder
+    volumes:
+      - .:/workspace
+      - unity-cache:/root/.unity3d
+    environment:
+      - UNITY_VERSION=6000.3.0f1
+      - UNITY_LICENSE_FILE=/root/.unity3d/Unity_lic.ulf
+    working_dir: /workspace
+    command: /bin/bash
+    # Pour activer: docker-compose run unity-builder /usr/local/bin/build-unity.sh all
+
+volumes:
+  unity-cache:
+    driver: local
