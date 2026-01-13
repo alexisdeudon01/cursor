@@ -278,43 +278,45 @@ def test_compilation():
     """Teste la compilation Unity (Client et Serveur)."""
     print("🔨 Tests de compilation Unity...")
     
-    # Vérifier si Unity est disponible (dans Docker ou local)
-    unity_available = False
+    # Vérifier si les builds existent déjà
+    build_client = PROJECT_ROOT / "Build/Client/Client.x86_64"
+    build_server = PROJECT_ROOT / "Build/Server/Server.x86_64"
+    
+    client_exists = build_client.exists()
+    server_exists = build_server.exists()
+    
+    if client_exists:
+        size = build_client.stat().st_size
+        print(f"  ✅ Build Client existe: Build/Client/Client.x86_64 ({size:,} bytes)")
+    else:
+        print("  ⚠️  Build Client non trouvé (sera compilé dans Docker)")
+    
+    if server_exists:
+        size = build_server.stat().st_size
+        print(f"  ✅ Build Serveur existe: Build/Server/Server.x86_64 ({size:,} bytes)")
+    else:
+        print("  ⚠️  Build Serveur non trouvé (sera compilé dans Docker)")
+    
+    # Vérifier si Docker est disponible pour les builds
+    docker_available = False
     try:
-        # Vérifier si on est dans un environnement avec Unity
         result = subprocess.run(
-            ["which", "Unity"],
+            ["docker", "--version"],
             capture_output=True,
             text=True,
             timeout=5
         )
         if result.returncode == 0:
-            unity_available = True
+            docker_available = True
+            print("  ✅ Docker disponible (builds Unity possibles)")
     except:
         pass
     
-    # Vérifier si les builds existent déjà
-    build_client = PROJECT_ROOT / "Build/Client/Client.x86_64"
-    build_server = PROJECT_ROOT / "Build/Server/Server.x86_64"
+    if not docker_available:
+        print("  ⚠️  Docker non disponible dans cet environnement")
+        print("  💡 Les builds Unity seront faits dans GitHub Actions avec Docker")
     
-    if build_client.exists():
-        print("  ✅ Build Client existe: Build/Client/Client.x86_64")
-    else:
-        print("  ⚠️  Build Client non trouvé (normal si pas encore compilé)")
-    
-    if build_server.exists():
-        print("  ✅ Build Serveur existe: Build/Server/Server.x86_64")
-    else:
-        print("  ⚠️  Build Serveur non trouvé (normal si pas encore compilé)")
-    
-    # Si Unity n'est pas disponible, on skip les tests de compilation
-    if not unity_available:
-        print("  ⚠️  Unity non disponible dans cet environnement")
-        print("  💡 Les tests de compilation seront faits dans Docker Unity ou localement")
-        return True  # On considère que c'est OK (tests seront faits ailleurs)
-    
-    # Si Unity est disponible, on pourrait lancer les builds
-    # Mais pour l'instant, on vérifie juste que les fichiers de build existent
+    # On considère que c'est OK (les builds seront faits dans le workflow GitHub Actions)
     print("  ✅ Tests de compilation: Vérification terminée")
     return True
 

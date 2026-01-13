@@ -29,14 +29,16 @@ build_client() {
     /opt/unity/Editor/Unity \
         -batchmode \
         -quit \
+        -nographics \
         -projectPath "${PROJECT_PATH}" \
         -buildTarget Linux64 \
-        -buildLinux64Player "${BUILD_CLIENT_PATH}/Client.x86_64" \
         -executeMethod BuildScript.BuildClient \
         -logFile "${PROJECT_PATH}/build-client.log" \
         || {
             echo "❌ Erreur build Client"
-            cat "${PROJECT_PATH}/build-client.log" | tail -50
+            if [ -f "${PROJECT_PATH}/build-client.log" ]; then
+                cat "${PROJECT_PATH}/build-client.log" | tail -50
+            fi
             exit 1
         }
     
@@ -59,14 +61,16 @@ build_server() {
     /opt/unity/Editor/Unity \
         -batchmode \
         -quit \
+        -nographics \
         -projectPath "${PROJECT_PATH}" \
         -buildTarget LinuxServer \
-        -buildLinuxServerPlayer "${BUILD_SERVER_PATH}/Server.x86_64" \
         -executeMethod BuildScript.BuildServer \
         -logFile "${PROJECT_PATH}/build-server.log" \
         || {
             echo "❌ Erreur build Serveur"
-            cat "${PROJECT_PATH}/build-server.log" | tail -50
+            if [ -f "${PROJECT_PATH}/build-server.log" ]; then
+                cat "${PROJECT_PATH}/build-server.log" | tail -50
+            fi
             exit 1
         }
     
