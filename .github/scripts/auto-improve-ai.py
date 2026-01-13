@@ -320,29 +320,12 @@ def test_compilation():
     print("  ✅ Tests de compilation: Vérification terminée")
     return True
 
-def train_llm_games():
-    """Entraîne le LLM pour jeux 2D (50% du temps)."""
-    print("🎮 Entraînement LLM pour jeux 2D (50% du temps)...")
-    try:
-        result = subprocess.run(
-            ["python3", ".github/scripts/train-llm-games.py"],
-            capture_output=True,
-            text=True,
-            timeout=900  # 15 minutes max
-        )
-        if result.returncode == 0:
-            print("✅ Entraînement LLM terminé")
-            if result.stdout:
-                print(result.stdout)
-        else:
-            print(f"⚠️ Erreur entraînement LLM: {result.stderr}")
-    except Exception as e:
-        print(f"⚠️ Erreur entraînement LLM: {e}")
+# Fonction train_llm_games() supprimée - LLM retiré complètement
 
 def main():
     """Fonction principale."""
     print("🚀 Démarrage du cycle d'amélioration avec IA...")
-    print("⏱️  Répartition: 50% LLM jeux 2D + 50% amélioration code")
+    print("⏱️  100% amélioration code")
     print("=" * 60)
     
     # Vérifier accès API
@@ -365,13 +348,7 @@ def main():
         print("⚠️ Mode simulation: ANTHROPIC_API_KEY non configuré")
         print("💡 Pour activer l'IA, ajoutez ANTHROPIC_API_KEY dans les secrets GitHub")
     
-    # ========== 50% DU TEMPS: ENTRAÎNEMENT LLM ==========
-    print("")
-    print("🎮 PHASE 1: Entraînement LLM pour jeux 2D (50% du temps)")
-    print("-" * 60)
-    train_llm_games()
-    
-    # ========== 50% DU TEMPS: AMÉLIORATION CODE ==========
+    # ========== 100% DU TEMPS: AMÉLIORATION CODE ==========
     print("")
     print("🔧 PHASE 2: Amélioration code (50% du temps)")
     print("-" * 60)
@@ -388,8 +365,8 @@ def main():
     print(f"📊 Version actuelle: {current_version}")
     print(f"📊 Prochaine version: {next_version}")
     
-    # Recherche patterns jeux 2D (déjà fait dans train_llm_games)
-    # Les patterns sont dans game-rules-dataset.json
+    # Recherche patterns jeux 2D
+    # Les patterns sont dans game-rules-dataset.json (si existe)
     
     # Générer les diagrammes UML
     generate_uml_diagrams(next_version)
