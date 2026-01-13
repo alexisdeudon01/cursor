@@ -1,0 +1,10 @@
+```mermaid
+flowchart LR
+  Client[Client App] --> NM[NetworkManager]
+  Server[Dedicated Server] --> NM
+  NM --> UT[UnityTransport]
+  NM --> RPC[ServerRpc/ClientRpc]
+  RPC --> AUTH[Authoritative Game Logic]
+  AUTH --> STATE[Replicated State]
+  STATE --> Client
+```

@@ -1,0 +1,14 @@
+```mermaid
+sequenceDiagram
+  participant Client
+  participant NM as NGO/NetworkManager
+  participant Server
+  participant Game as GameLogic
+
+  Client->>NM: StartClient()
+  NM->>Server: Connect
+  Server-->>NM: Accept + Spawn
+  Server->>Game: Init authoritative state
+  Server-->>Client: ClientRpc initial snapshot
+  Client->>Client: Load scene / init UI
+```

@@ -1,0 +1,98 @@
+name: Auto-Improve
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# ⚡ ANTI-DOUBLON: Annule automatiquement les anciens runs
+concurrency:
+  group: auto-improve-global
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  improve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔄 Sync
+        run: |
+          git config user.name "EvoAgentX Bot"
+          git config user.email "bot@evoagentx.ai"
+          git fetch origin main
+          git merge origin/main --no-edit || git reset --hard origin/main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Deps
+        run: pip install requests anthropic
+
+      - name: ⏱️ Timer
+        id: timer
+        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: 📊 Analyse
+        run: |
+          echo "═══════════════════════════════════"
+          echo "📊 ANALYSE"
+          echo "═══════════════════════════════════"
+          find Assets -name "*.cs" 2>/dev/null | wc -l | xargs echo "C#:"
+          find Assets -name "*.unity" 2>/dev/null | wc -l | xargs echo "Scenes:"
+
+      - name: 🔑 API
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          [ -z "$ANTHROPIC_API_KEY" ] && echo "MODE=basic" >> $GITHUB_ENV || echo "MODE=ai" >> $GITHUB_ENV
+
+      - name: 📈 Metrics
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p .github/reports
+          [ -f .github/scripts/generate_metrics.py ] && python3 .github/scripts/generate_metrics.py || echo '{}' > .github/reports/current_metrics.json
+
+      - name: 🤖 Improve
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          [ -f .github/scripts/evoagentx_improve.py ] && python3 .github/scripts/evoagentx_improve.py || true
+
+      - name: 📊 Eval
+        id: eval
+        run: |
+          [ -f .github/scripts/evaluate_changes.py ] && python3 .github/scripts/evaluate_changes.py || true
+          echo "changes=$([[ $(git status --porcelain | wc -l) -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: 💰 Costs
+        run: |
+          MINS=$(awk "BEGIN {printf \"%.1f\", ($(date +%s)-${{ steps.timer.outputs.start }})/60}")
+          [ -f .github/scripts/track_costs.py ] && python3 .github/scripts/track_costs.py update 1000 500 $MINS || true
+
+      - name: 💾 Commit
+        if: steps.eval.outputs.changes == 'true'
+        run: |
+          git add -A
+          git commit -m "🤖 Auto #${{ github.run_number }} [skip ci]" || true
+          git push origin main || true
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "Run #${{ github.run_number }} - ${{ job.status }}"
+          [ -f .github/scripts/track_costs.py ] && python3 .github/scripts/track_costs.py || true
+
+      - name: Generate UML Diagrams
+        run: |
+          VERSION=$(date +%Y%m%d%H%M)
+          python3 .github/scripts/generate-uml-diagrams.py 1

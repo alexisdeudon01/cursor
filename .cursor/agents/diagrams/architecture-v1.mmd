@@ -1,0 +1,18 @@
+```mermaid
+flowchart TB
+  subgraph Build
+    GH[GitHub Actions] --> CI[auto-improve.yml]
+    CI --> DGM[generate-uml-diagrams.py]
+    CI --> AI[auto-improve-ai.py / auto-improve.py]
+    CI --> UB[unity-builder (docker)]
+  end
+
+  subgraph Runtime
+    C[Client (NGO)] <--> S[Dedicated Server (authoritative)]
+    C -->|RPC| NGO[Netcode for GameObjects]
+    S -->|RPC| NGO
+  end
+
+  UB -->|Artifacts| C
+  UB -->|Artifacts| S
+```

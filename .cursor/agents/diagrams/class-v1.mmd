@@ -1,0 +1,12 @@
+```mermaid
+classDiagram
+  class NetworkManager
+  class UnityTransport
+  class ServerGame
+  class ClientGame
+  class ReplicatedState
+
+  NetworkManager --> UnityTransport
+  ServerGame --> ReplicatedState : writes
+  ClientGame --> ReplicatedState : reads
+```

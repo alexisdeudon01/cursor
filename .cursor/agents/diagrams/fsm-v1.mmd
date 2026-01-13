@@ -1,0 +1,12 @@
+```mermaid
+stateDiagram-v2
+  [*] --> Boot
+  Boot --> MainMenu
+  MainMenu --> Connecting: start client/server
+  Connecting --> InLobby: connected
+  InLobby --> InGame: start match
+  InGame --> InLobby: end match
+  InLobby --> MainMenu: disconnect
+  Connecting --> MainMenu: fail/timeout
+  InGame --> [*]: quit
+```

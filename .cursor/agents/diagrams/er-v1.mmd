@@ -1,0 +1,23 @@
+```mermaid
+erDiagram
+  PLAYER ||--o{ SESSION : joins
+  SESSION ||--|| GAME : runs
+  SESSION ||--o{ ENTITY : has
+
+  PLAYER {
+    string playerId
+    string displayName
+  }
+  SESSION {
+    string sessionId
+    string mapId
+  }
+  GAME {
+    string gameId
+    string ruleset
+  }
+  ENTITY {
+    string netId
+    string prefab
+  }
+```

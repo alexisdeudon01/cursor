@@ -1,0 +1,40 @@
+{
+  "metrics": [
+    {
+      "name": "Server Authority",
+      "weight": 0.3,
+      "score": 50,
+      "details": "\u00c0 \u00e9valuer"
+    },
+    {
+      "name": "Structure Discovery",
+      "weight": 0.2,
+      "score": 50,
+      "details": "\u00c0 \u00e9valuer"
+    },
+    {
+      "name": "Network Flow",
+      "weight": 0.2,
+      "score": 50,
+      "details": "\u00c0 \u00e9valuer"
+    },
+    {
+      "name": "Build Ready",
+      "weight": 0.2,
+      "score": 50,
+      "details": "\u00c0 \u00e9valuer"
+    },
+    {
+      "name": "Code Quality",
+      "weight": 0.1,
+      "score": 50,
+      "details": "\u00c0 \u00e9valuer"
+    }
+  ],
+  "total_score": 50,
+  "improvements": [
+    "V\u00e9rifier cl\u00e9 API",
+    "Ajouter scripts",
+    "Configurer Unity"
+  ]
+}
