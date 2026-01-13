@@ -1,20 +1,18 @@
-name: Auto-Improve Project (Thebestclient)
+name: Auto-Improve (24/7)
 
+# ═══════════════════════════════════════════════════════════════════
+# DÉCLENCHEURS
+# - Toutes les 15 minutes (fonctionne même PC éteint)
+# - Manuel via GitHub UI
+# - Sur push vers main
+# ═══════════════════════════════════════════════════════════════════
 on:
   schedule:
-    # Exécute toutes les 15 minutes.
     - cron: '*/15 * * * *'
-  workflow_dispatch: # Permet de lancer manuellement
+  workflow_dispatch:
   push:
-    branches:
-      - dev
-    paths:
-      - '.cursor/agents/**'
-      - 'Assets/Scripts/**'
-      - 'Assets/Scenes/**'
-      - 'Assets/Prefabs/**'
+    branches: [main]
 
-# Empêche les exécutions simultanées
 concurrency:
   group: auto-improve
   cancel-in-progress: true
@@ -22,126 +20,141 @@ concurrency:
 jobs:
   improve:
     runs-on: ubuntu-latest
+    timeout-minutes: 14
     permissions:
       contents: write
-      pull-requests: write
-      
+
     steps:
-      - name: Checkout repository
+      # ═══════════════════════════════════════════════════════════════
+      # 1. LIBÉRER ESPACE DISQUE
+      # ═══════════════════════════════════════════════════════════════
+      - name: Free Disk Space
+        run: |
+          echo "🧹 Nettoyage espace disque..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          docker system prune -af || true
+          df -h /
+
+      # ═══════════════════════════════════════════════════════════════
+      # 2. CHECKOUT
+      # ═══════════════════════════════════════════════════════════════
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: dev
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          ref: main
+          fetch-depth: 0
+
+      # ═══════════════════════════════════════════════════════════════
+      # 3. CACHE UNITY LIBRARY
+      # ═══════════════════════════════════════════════════════════════
+      - name: Cache Unity Library
+        uses: actions/cache@v4
         with:
-          node-version: '20'
-          
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: Library-
+
+      # ═══════════════════════════════════════════════════════════════
+      # 4. SETUP PYTHON
+      # ═══════════════════════════════════════════════════════════════
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
-      - name: Install dependencies
-        run: |
-          pip install -q requests mermaid-cli || echo "mermaid-cli non disponible, utilisation API en ligne"
-          
-      - name: Run Auto-Improve Script with AI
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      # ═══════════════════════════════════════════════════════════════
+      # 5. AI IMPROVEMENT (Claude API)
+      # ═══════════════════════════════════════════════════════════════
+      - name: AI Improvement
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          # Essayer d'abord avec IA, sinon fallback sur script basique
-          if [ -n "$ANTHROPIC_API_KEY" ]; then
-            echo "🤖 Utilisation de l'IA Claude pour amélioration..."
-            python3 .github/scripts/auto-improve-ai.py
+          if [ -n "$ANTHROPIC_API_KEY" ] && [ -f ".github/scripts/auto-improve-ai.py" ]; then
+            echo "🤖 Running AI improvement..."
+            python3 .github/scripts/auto-improve-ai.py || echo "⚠️ AI script failed"
           else
-            echo "⚠️ Mode basique (pas d'IA) - configurez ANTHROPIC_API_KEY pour activer l'IA"
-            python3 .github/scripts/auto-improve.py
+            echo "ℹ️ AI improvement skipped (no API key or script)"
           fi
-          
-      - name: Verify Metrics Quality
-        run: |
-          echo "📊 Vérification des métriques de qualité..."
-          python3 .github/scripts/verify-metrics.py || echo "⚠️ Vérification métriques échouée (continue)"
-          
-      - name: Generate UML Diagrams
-        run: |
-          VERSION=$(python3 -c "import re; from pathlib import Path; files = list(Path('.cursor/agents').glob('thebestclient*.md')); versions = [int(re.search(r'thebestclient(\d+)', f.name).group(1)) for f in files if re.search(r'thebestclient(\d+)', f.name)]; print(max(versions) + 1 if versions else 3)")
-          python3 .github/scripts/generate-uml-diagrams.py $VERSION
-          
-      - name: Build Unity with Docker (Client + Server)
+
+      # ═══════════════════════════════════════════════════════════════
+      # 6. BUILD UNITY VIA DOCKER
+      # ═══════════════════════════════════════════════════════════════
+      - name: Build Unity (Docker)
+        id: unity-build
+        uses: game-ci/unity-builder@v4
         continue-on-error: true
-        run: |
-          echo "🐳 Build Unity avec Docker..."
-          echo "⚠️  Note: Unity nécessite une licence. Les builds peuvent échouer sans licence."
-          echo ""
-          
-          # Vérifier si Docker est disponible
-          if ! command -v docker &> /dev/null; then
-            echo "⚠️  Docker non disponible, skip des builds Unity"
-            exit 0
-          fi
-          
-          # Build de l'image Docker Unity
-          echo "📦 Build de l'image Docker Unity..."
-          docker build -t unity-6000.3.0f1-builder -f Dockerfile . || {
-            echo "⚠️  Erreur build Docker image (peut nécessiter une licence Unity)"
-            exit 0
-          }
-          
-          # Test build Client (optionnel, continue si échec)
-          echo ""
-          echo "🔨 Test build Client..."
-          docker run --rm \
-            -v $PWD:/workspace \
-            -w /workspace \
-            unity-6000.3.0f1-builder \
-            /usr/local/bin/build-unity.sh client || {
-            echo "⚠️  Build Client échoué (normal sans licence Unity)"
-          }
-          
-          # Test build Serveur (optionnel, continue si échec)
-          echo ""
-          echo "🔨 Test build Serveur..."
-          docker run --rm \
-            -v $PWD:/workspace \
-            -w /workspace \
-            unity-6000.3.0f1-builder \
-            /usr/local/bin/build-unity.sh server || {
-            echo "⚠️  Build Serveur échoué (normal sans licence Unity)"
-          }
-          
-          echo ""
-          echo "✅ Tests de compilation Docker terminés (peuvent avoir échoué sans licence Unity)"
-          
-      - name: Commit and Push Changes
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: StandaloneLinux64
+          buildName: TheBestGame
+          buildsPath: Build
+          unityVersion: 6000.0.23f1
+          dockerCpuLimit: 2
+          dockerMemoryLimit: 12g
 
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+      # ═══════════════════════════════════════════════════════════════
+      # 7. UPLOAD ARTIFACT
+      # ═══════════════════════════════════════════════════════════════
+      - name: Upload Build
+        if: steps.unity-build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheBestGame-Linux-${{ github.run_number }}
+          path: Build/StandaloneLinux64
+          retention-days: 7
 
+      # ═══════════════════════════════════════════════════════════════
+      # 8. BUILD STATUS
+      # ═══════════════════════════════════════════════════════════════
+      - name: Build Status
+        run: |
+          echo "╔═══════════════════════════════════════════════════════════╗"
+          echo "║                    BUILD STATUS                           ║"
+          echo "╠═══════════════════════════════════════════════════════════╣"
+          echo "║ Unity Build: ${{ steps.unity-build.outcome }}"
+          echo "║ Run Number:  ${{ github.run_number }}"
+          echo "║ Time:        $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "╚═══════════════════════════════════════════════════════════╝"
+
+      # ═══════════════════════════════════════════════════════════════
+      # 9. COMMIT & PUSH
+      # ═══════════════════════════════════════════════════════════════
+      - name: Commit Changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Ignorer les gros dossiers
+          echo -e "Build/\nLibrary/\nTemp/\nLogs/\n*.log" >> .gitignore
+          
           git add -A
+          git reset -- Build/ Library/ Temp/ Logs/ 2>/dev/null || true
+          
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "✅ Pas de changements"
             exit 0
           fi
-
-          git commit -m "🤖 Auto-improve: Cycle $(date +%Y%m%d-%H%M%S) [skip ci]"
-
-          # Multiple scheduled/push runs can race and update dev concurrently.
-          # Rebase & retry to avoid "rejected (fetch first)" and ensure changes land.
-          for attempt in 1 2 3 4; do
-            if git push origin dev; then
+          
+          git commit -m "🤖 Auto-improve #${{ github.run_number }} [skip ci]"
+          
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              echo "✅ Push réussi"
               exit 0
             fi
-            echo "Push rejected; rebasing on origin/dev and retrying (attempt $attempt/4)..."
-            git pull --rebase --autostash origin dev
+            echo "⚠️ Push échoué, tentative $i/5..."
+            git pull --rebase origin main
+            sleep 2
           done
-
-          echo "ERROR: failed to push to dev after 4 attempts"
+          
+          echo "❌ Push échoué après 5 tentatives"
           exit 1
