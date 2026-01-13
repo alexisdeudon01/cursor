@@ -1,28 +1,27 @@
 # Analyse Auto-Improve avec IA - Version 9
-**Date**: 2026-01-13 23:10:51
+**Date**: 2026-01-13 23:28:49
 **Branche**: dev
 **Exécution**: GitHub Actions avec IA Claude
 
 ## Analyse effectuée par IA
 
 ### Findings
-- **architecture** (important): Duplication de StateMachine dans Core/ et Core/Patterns/ - confusion d'architecture
-- **modularity** (critical): SessionContainerManager manque d'interface pour la modularité - difficile à tester et étendre
-- **modularity** (important): GameRegistry n'a pas de validation des jeux enregistrés - risque d'erreurs runtime
-- **network** (important): MapConfigData ne gère pas la synchronisation réseau explicitement - potentiel désync
-- **architecture** (minor): HeadlessEntitiesBootstrap pourrait bénéficier d'une meilleure séparation des responsabilités
+- **architecture** (critical): Duplication de StateMachine - présence de Assets/Scripts/Core/StateMachine.cs ET Assets/Scripts/Core/Patterns/StateMachine.cs créant une confusion architecturale
+- **modularity** (important): SessionContainer et SessionContainerManager ont des responsabilités qui se chevauchent - violation du principe de responsabilité unique
+- **network** (important): MapConfigData isolé sans intégration claire avec le système de sessions - potentiel problème de synchronisation réseau
+- **architecture** (minor): HeadlessEntitiesBootstrap manque de documentation sur son rôle dans l'architecture Client/Server
 
 ### Améliorations proposées
-- **code_change**: Créer ISessionContainerManager interface pour améliorer modularité et testabilité
-- **code_change**: Ajouter validation dans GameRegistry pour éviter erreurs runtime
-- **refactor**: Supprimer duplication StateMachine - garder uniquement Core/Patterns/StateMachine.cs
-- **code_change**: Améliorer MapConfigData avec attributs NGO pour synchronisation réseau
-- **code_change**: Ajouter factory pattern pour création modulaire de sessions
+- **refactor**: Consolider les StateMachine en une seule implémentation générique dans Core/Patterns
+- **code_change**: Refactoriser SessionContainer pour séparer les données des opérations
+- **code_change**: Intégrer MapConfigData dans le système de sessions avec synchronisation réseau
+- **documentation**: Ajouter documentation architecturale pour HeadlessEntitiesBootstrap
+- **code_change**: Créer un système de tests automatisés pour valider l'architecture
 
 ### Modularité
-- **Games**: ok - GameRegistry et IGameDefinition permettent ajout facile de nouveaux jeux. GameInstanceManager gère bien les instances multiples.
-- **Sessions**: needs_improvement - SessionContainerManager manque d'interface. Pas de factory pattern. Validation insuffisante. Score actuel: 7/10.
-- **Maps**: needs_improvement - MapConfigData manque de synchronisation réseau explicite. Pas de système de validation des configurations de maps.
+- **Games**: ok - GameRegistry et IGameDefinition permettent l'ajout facile de nouveaux jeux. 3+ jeux implémentés.
+- **Sessions**: needs_improvement - SessionContainer et SessionContainerManager créent une confusion. Refactoring nécessaire pour séparer données/logique.
+- **Maps**: needs_improvement - MapConfigData isolé, manque d'intégration avec le système de sessions et synchronisation réseau.
 
 ---
 **Généré automatiquement par IA (Claude) via GitHub Actions**
