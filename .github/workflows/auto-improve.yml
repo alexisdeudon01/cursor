@@ -1,189 +1,93 @@
-name: Auto-Improve (EvoAgentX)
+name: Auto-Improve
 
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'Assets/Scripts/**'
-      - '.cursor/agents/**'
+
+# ⚡ ANTI-DOUBLON: Annule automatiquement les anciens runs
+concurrency:
+  group: auto-improve
+  cancel-in-progress: true
 
 permissions:
   contents: write
-  actions: read
-
-env:
-  SKIP_PNG_CONVERSION: "true"
 
 jobs:
   improve:
-    name: 🤖 Auto-Amélioration
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
     steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🔄 Auto-Pull
+      - name: 🔄 Sync
         run: |
-          echo "🔄 Sync avec remote..."
           git config user.name "EvoAgentX Bot"
           git config user.email "bot@evoagentx.ai"
           git fetch origin main
           git merge origin/main --no-edit || git reset --hard origin/main
-          echo "✅ Synchronisé"
-          git log --oneline -3
 
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
-        run: |
-          pip install requests anthropic
-          echo "✅ Dépendances OK"
+      - name: 📦 Deps
+        run: pip install requests anthropic
 
-      - name: ⏱️ Start Timer
+      - name: ⏱️ Timer
         id: timer
-        run: echo "start_time=$(date +%s)" >> $GITHUB_OUTPUT
+        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
 
-      - name: 📊 Phase 1 - Analyse
+      - name: 📊 Analyse
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "📊 ANALYSE DU PROJET"
-          echo "═══════════════════════════════════════════════════════"
-          find Assets -type f -name "*.cs" 2>/dev/null | wc -l | xargs echo "Scripts C#:"
-          find Assets -type f -name "*.unity" 2>/dev/null | wc -l | xargs echo "Scènes:"
-          find Assets -type f -name "*.prefab" 2>/dev/null | wc -l | xargs echo "Prefabs:"
-          echo ""
-          if [ -f ".cursor/agents/agent.md" ]; then
-            echo "✅ Agent trouvé"
-            head -10 .cursor/agents/agent.md
-          fi
+          echo "═══════════════════════════════════"
+          echo "📊 ANALYSE"
+          echo "═══════════════════════════════════"
+          find Assets -name "*.cs" 2>/dev/null | wc -l | xargs echo "C#:"
+          find Assets -name "*.unity" 2>/dev/null | wc -l | xargs echo "Scenes:"
 
-      - name: 🔑 Phase 2 - API Check
+      - name: 🔑 API
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "🔑 VÉRIFICATION API"
-          echo "═══════════════════════════════════════════════════════"
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "❌ ANTHROPIC_API_KEY manquante"
-            echo "MODE=basic" >> $GITHUB_ENV
-          else
-            echo "✅ ANTHROPIC_API_KEY configurée"
-            echo "MODE=ai" >> $GITHUB_ENV
-          fi
+          [ -z "$ANTHROPIC_API_KEY" ] && echo "MODE=basic" >> $GITHUB_ENV || echo "MODE=ai" >> $GITHUB_ENV
 
-      - name: 📈 Phase 3 - Métriques
+      - name: 📈 Metrics
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "📈 GÉNÉRATION DES MÉTRIQUES"
-          echo "═══════════════════════════════════════════════════════"
           mkdir -p .github/reports
-          if [ -f ".github/scripts/generate_metrics.py" ]; then
-            python3 .github/scripts/generate_metrics.py
-          else
-            echo '{"total_score": 0, "timestamp": "'$(date -Iseconds)'"}' > .github/reports/current_metrics.json
-          fi
-          cat .github/reports/current_metrics.json 2>/dev/null || echo "{}"
+          [ -f .github/scripts/generate_metrics.py ] && python3 .github/scripts/generate_metrics.py || echo '{}' > .github/reports/current_metrics.json
 
-      - name: 🤖 Phase 4 - Amélioration
-        id: improve
+      - name: 🤖 Improve
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "🤖 AMÉLIORATION VIA EVOAGENTX"
-          echo "═══════════════════════════════════════════════════════"
-          if [ -f ".github/scripts/evoagentx_improve.py" ]; then
-            python3 .github/scripts/evoagentx_improve.py
-          else
-            echo "ℹ️ Script evoagentx_improve.py non trouvé, skip"
-          fi
-          echo "input_tokens=1000" >> $GITHUB_OUTPUT
-          echo "output_tokens=500" >> $GITHUB_OUTPUT
+          [ -f .github/scripts/evoagentx_improve.py ] && python3 .github/scripts/evoagentx_improve.py || true
 
-      - name: 📊 Phase 5 - Évaluation
-        id: evaluate
+      - name: 📊 Eval
+        id: eval
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "📊 ÉVALUATION DES CHANGEMENTS"
-          echo "═══════════════════════════════════════════════════════"
-          if [ -f ".github/scripts/evaluate_changes.py" ]; then
-            python3 .github/scripts/evaluate_changes.py
-          fi
-          echo ""
-          echo "Fichiers modifiés:"
-          git status --short
-          CHANGES=$(git status --porcelain | wc -l)
-          echo "Total: $CHANGES fichiers"
-          if [ "$CHANGES" -gt 0 ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
+          [ -f .github/scripts/evaluate_changes.py ] && python3 .github/scripts/evaluate_changes.py || true
+          echo "changes=$([[ $(git status --porcelain | wc -l) -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
 
-      - name: 💰 Phase 6 - Cost Tracking
+      - name: 💰 Costs
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "💰 TRACKING DES COÛTS"
-          echo "═══════════════════════════════════════════════════════"
-          START=${{ steps.timer.outputs.start_time }}
-          END=$(date +%s)
-          MINUTES=$(awk "BEGIN {printf \"%.2f\", ($END - $START) / 60}")
-          echo "⏱️ Durée: ${MINUTES} min"
-          
-          if [ -f ".github/scripts/track_costs.py" ]; then
-            python3 .github/scripts/track_costs.py update 1000 500 $MINUTES || true
-            python3 .github/scripts/track_costs.py report || true
-          fi
+          MINS=$(awk "BEGIN {printf \"%.1f\", ($(date +%s)-${{ steps.timer.outputs.start }})/60}")
+          [ -f .github/scripts/track_costs.py ] && python3 .github/scripts/track_costs.py update 1000 500 $MINS || true
 
-      - name: 💾 Phase 7 - Commit
-        if: steps.evaluate.outputs.has_changes == 'true'
+      - name: 💾 Commit
+        if: steps.eval.outputs.changes == 'true'
         run: |
-          echo "═══════════════════════════════════════════════════════"
-          echo "💾 COMMIT DES AMÉLIORATIONS"
-          echo "═══════════════════════════════════════════════════════"
           git add -A
-          SCORE=$(grep -o '"total_score":[0-9]*' .github/reports/current_metrics.json 2>/dev/null | grep -o '[0-9]*' || echo "N/A")
-          COST=$(grep -o '"total_cost_eur":[0-9.]*' .github/config/costs.json 2>/dev/null | grep -o '[0-9.]*' || echo "0")
-          git commit -m "🤖 Auto-improve #${{ github.run_number }} - Score:${SCORE} Cost:€${COST} [skip ci]"
-          git push origin main
-          echo "✅ Pushé"
+          git commit -m "🤖 Auto #${{ github.run_number }} [skip ci]" || true
+          git push origin main || true
 
-      - name: 📊 Commit Cost Only
-        if: steps.evaluate.outputs.has_changes != 'true'
-        run: |
-          if ! git diff --quiet .github/config/costs.json 2>/dev/null; then
-            git add .github/config/costs.json .github/reports/ 2>/dev/null || true
-            git commit -m "📊 Cost update #${{ github.run_number }} [skip ci]" || true
-            git push origin main || true
-          fi
-          echo "ℹ️ Pas d'autres changements"
-
-      - name: 📋 Résumé
+      - name: 📋 Summary
         if: always()
         run: |
-          echo ""
-          echo "╔═══════════════════════════════════════════════════════╗"
-          echo "║                    📋 RÉSUMÉ                          ║"
-          echo "╠═══════════════════════════════════════════════════════╣"
-          echo "║  Run: #${{ github.run_number }}"
-          echo "║  Mode: ${{ env.MODE }}"
-          echo "║  Status: ${{ job.status }}"
-          echo "╚═══════════════════════════════════════════════════════╝"
-          
-          if [ -f ".github/scripts/track_costs.py" ]; then
-            python3 .github/scripts/track_costs.py || true
-          fi
+          echo "Run #${{ github.run_number }} - ${{ job.status }}"
+          [ -f .github/scripts/track_costs.py ] && python3 .github/scripts/track_costs.py || true
