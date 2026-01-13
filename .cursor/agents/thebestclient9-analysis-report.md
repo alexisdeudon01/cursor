@@ -1,27 +1,26 @@
 # Analyse Auto-Improve avec IA - Version 9
-**Date**: 2026-01-13 19:10:02
+**Date**: 2026-01-13 19:28:08
 **Branche**: dev
 **Exécution**: GitHub Actions avec IA Claude
 
 ## Analyse effectuée par IA
 
 ### Findings
-- **architecture** (critical): Duplication de StateMachine - deux implémentations différentes dans Core/ et Core/Patterns/
-- **modularity** (important): SessionContainer et SessionContainerManager - responsabilités confuses et couplage fort
-- **network** (important): MapConfigData isolé - pas d'intégration avec le système de jeux modulaire
-- **architecture** (minor): HeadlessEntitiesBootstrap - nom peu explicite pour un point d'entrée serveur
+- **architecture** (critical): Duplication de StateMachine dans Core/ et Core/Patterns/ - risque de confusion et maintenance difficile
+- **modularity** (important): SessionContainer et SessionContainerManager manquent d'interfaces pour l'abstraction
+- **architecture** (important): Start.cs est trop générique et ne suit pas les conventions de Unity (devrait être GameBootstrap.cs)
+- **network** (minor): MapConfigData manque de validation des données réseau
 
 ### Améliorations proposées
-- **refactor**: Consolidation des StateMachine - utiliser uniquement le pattern générique
-- **code_change**: Refactoring SessionContainer - séparer données et logique métier
-- **code_change**: Intégration MapConfigData dans le système modulaire
-- **code_change**: Amélioration bootstrap serveur avec injection de dépendances
-- **documentation**: Ajout documentation architecture modulaire
+- **refactor**: Consolider les StateMachine en une seule implémentation générique dans Core/Patterns/
+- **code_change**: Créer interfaces pour SessionContainer et améliorer modularité des sessions
+- **refactor**: Renommer Start.cs en GameBootstrap.cs et améliorer la structure de démarrage
+- **code_change**: Ajouter validation réseau pour MapConfigData
 
 ### Modularité
-- **Games**: needs_improvement - GameRegistry OK mais IGameDefinition manque intégration MapConfig. SessionContainer couplé à la logique métier.
-- **Sessions**: needs_improvement - SessionContainerManager et SessionContainer ont des responsabilités floues. Besoin de séparer données/logique.
-- **Maps**: needs_improvement - MapConfigData isolé du système modulaire. Pas d'intégration avec GameRegistry/IGameDefinition.
+- **Games**: ok - GameRegistry et IGameDefinition permettent l'ajout facile de nouveaux jeux. GameContainer et GameInstanceManager gèrent bien l'instanciation.
+- **Sessions**: needs_improvement - SessionContainer manque d'interface pour l'abstraction. SessionContainerManager pourrait être plus modulaire avec des factories.
+- **Maps**: needs_improvement - MapConfigData manque de validation et d'extensibilité. Pas de système de registry pour les maps comme pour les jeux.
 
 ---
 **Généré automatiquement par IA (Claude) via GitHub Actions**
