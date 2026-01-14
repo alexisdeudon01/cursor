@@ -67,7 +67,7 @@ def main():
     branch = "codex/ci-autotune"
     sh(f"git checkout -B {branch}")
 
-    subprocess.check_call("git apply codex.patch", shell=True)
+    subprocess.check_call("gi t apply codex.patch", shell=True)
 
     if sh("git status --porcelain") == "":
         print("No changes after applying patch.")
