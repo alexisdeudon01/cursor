@@ -48,3 +48,4 @@ jobs:
         run: |
           pip install anthropic
           python -c "import anthropic; print('✅ Bibliothèque Anthropic installée et prête.')"
+ 
