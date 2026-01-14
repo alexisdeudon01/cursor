@@ -64,6 +64,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -75,7 +76,7 @@ jobs:
           echo "Unity version detected: ${UNITY_VERSION}"
 
           echo "Fetching tags from ghcr.io/game-ci/unity-editor ..."
-          TAGS_JSON="$(curl -fsSL "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
+          TAGS_JSON="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
           # Keep only likely linux editor tags for this exact Unity version
           CANDIDATES="$(echo "$TAGS_JSON" | jq -r '.tags[]' \
             | grep -E "^ubuntu-${UNITY_VERSION}-linux" \
@@ -180,7 +181,7 @@ jobs:
           set -euo pipefail
           echo "==== Actions duration (proxy) ===="
           RUN_JSON="$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          DURATION_MS="$(echo "$RUN_JSON" | jq -r '.run_duration_ms // .dfuration_ms // 0')"
+          DURATION_MS="$(echo "$RUN_JSON" | jq -r '.run_duration_ms // .duration_ms // 0')"
           echo "run_duration_ms=$DURATION_MS"
           DURATION_MS="$DURATION_MS" python3 -c "import os; ms=int(os.environ.get('DURATION_MS','0') or 0); print(f'Approx runner time: {ms/60000:.2f} minutes' if ms else 'Could not read duration.')"
           echo "Cost depends on your GitHub plan (minutes quota / billing)."
