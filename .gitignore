@@ -16,3 +16,4 @@ __pycache__/
 *.pyc
 *.sh
 .github/workflows/*.bak
+final-fix-ci.patch
