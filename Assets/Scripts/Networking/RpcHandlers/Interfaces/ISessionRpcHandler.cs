@@ -116,3 +116,4 @@ namespace Networking.RpcHandlers
         GameNotFound = 9
     }
 }
+using Networking.Shared;
