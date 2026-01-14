@@ -17,8 +17,6 @@ permissions:
 
 env:
   UNITY_VERSION: 6000.3.0f1
-  # Force a lighter image (Mono) instead of huge il2cpp
-  UNITYCI_MONO_IMAGE: unityci/editor:ubuntu-6000.3.0f1-linux-mono-3
 
 jobs:
   tests:
@@ -44,7 +42,6 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          customImage: ${{ env.UNITYCI_MONO_IMAGE }}
 
       - name: Upload test artifacts (always)
         if: always()
@@ -83,7 +80,6 @@ jobs:
           targetPlatform: StandaloneLinux64
           buildMethod: BuildLinuxMono.PerformBuild
           buildsPath: build
-          customImage: ${{ env.UNITYCI_MONO_IMAGE }}
 
       - name: Upload linux build
         uses: actions/upload-artifact@v4
