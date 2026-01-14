@@ -6,7 +6,7 @@ MODEL = os.getenv("CODEX_MODEL", "gpt-5-codex")
 TARGET_FILES = [
     ".github/workflows/ci.yml",
     "Dockerfile.ci",
-    "Assets/Editor/CI/BuildLinuxMono.cs",
+    "Assets/Editor/BuildLinuxMono.cs",
 ]
 
 SYSTEM = """You are a CI/CD + Unity build expert.
@@ -67,7 +67,7 @@ def main():
     branch = "codex/ci-autotune"
     sh(f"git checkout -B {branch}")
 
-    subprocess.check_call("gi t apply codex.patch", shell=True)
+    subprocess.check_call("git apply codex.patch", shell=True)
 
     if sh("git status --porcelain") == "":
         print("No changes after applying patch.")
