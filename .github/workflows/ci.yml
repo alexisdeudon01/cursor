@@ -73,15 +73,38 @@ jobs:
           # Default model if vars.ANTHROPIC_MODEL is empty
           MODEL="${ANTHROPIC_MODEL:-claude-3-5-sonnet-20241022}"
           
-          # Cost tracking (USD): Claude 3.5 Sonnet pricing (approximate)
+          # Cost tracking (USD): Claude 3.5 Sonnet pricing
           # Input: ~$3/MTok, Output: ~$15/MTok
-          # Average request: ~0.001-0.01 USD
-          ESTIMATED_COST_PER_REQUEST=0.01
           MAX_COST_USD=100.0
-          TOTAL_COST=0.0
           MAX_ATTEMPTS=10
           ATTEMPT=0
           CHOSEN_TAG=""
+          COST_TRACKING_FILE="${UNITY_LOG_DIR}/claude_api_costs.txt"
+          
+          # Initialize or load cumulative cost from file
+          mkdir -p "${UNITY_LOG_DIR}"
+          if [[ -f "$COST_TRACKING_FILE" ]]; then
+            CUMULATIVE_COST="$(cat "$COST_TRACKING_FILE" 2>/dev/null | head -n 1 | grep -oP '[\d.]+' | head -n 1 || echo "0.0")"
+            echo "📊 Loaded cumulative cost from file: $${CUMULATIVE_COST} USD"
+          else
+            CUMULATIVE_COST=0.0
+            echo "📊 Starting fresh cost tracking (file: ${COST_TRACKING_FILE})"
+          fi
+          
+          # Session cost (costs for this run only)
+          SESSION_COST=0.0
+          
+          # Helper function to save cost to file
+          save_cost() {
+            local new_total="$1"
+            {
+              echo "${new_total}"
+              echo "# Last updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+              echo "# Session cost: ${SESSION_COST}"
+              echo "# Attempt: ${ATTEMPT}"
+              echo "# Unity version: ${UNITY_VERSION}"
+            } > "$COST_TRACKING_FILE"
+          }
           
           if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
             echo "❌ ANTHROPIC_API_KEY missing -> cannot proceed"
@@ -108,9 +131,17 @@ jobs:
           COST_1="$(python3 -c "print((${INPUT_TOKENS_1} * 3 + ${OUTPUT_TOKENS_1} * 15) / 1000000)" 2>/dev/null || \
             awk "BEGIN {printf \"%.6f\", (${INPUT_TOKENS_1} * 3 + ${OUTPUT_TOKENS_1} * 15) / 1000000}" 2>/dev/null || \
             echo "0.01")"
-          TOTAL_COST="${COST_1}"
+          SESSION_COST="$(python3 -c "print(${SESSION_COST} + ${COST_1})" 2>/dev/null || \
+            awk "BEGIN {printf \"%.6f\", ${SESSION_COST} + ${COST_1}}" 2>/dev/null || \
+            echo "${SESSION_COST}")"
+          CUMULATIVE_COST="$(python3 -c "print(${CUMULATIVE_COST} + ${COST_1})" 2>/dev/null || \
+            awk "BEGIN {printf \"%.6f\", ${CUMULATIVE_COST} + ${COST_1}}" 2>/dev/null || \
+            echo "${CUMULATIVE_COST}")"
           
-          echo "Prompt structure received (cost: ~$${COST_1})"
+          # Save to file
+          save_cost "$CUMULATIVE_COST"
+          
+          echo "Prompt structure received (cost: ~$${COST_1}, session: ~$${SESSION_COST}, cumulative: ~$${CUMULATIVE_COST})"
           echo "Structure: ${PROMPT_STRUCTURE:0:200}..."
           
           if [[ -z "${PROMPT_STRUCTURE:-}" || "${PROMPT_STRUCTURE}" == "null" ]]; then
@@ -128,13 +159,14 @@ jobs:
             ATTEMPT=$((ATTEMPT + 1))
             
             # Check cost limit (using awk for comparison since it's more widely available)
-            COST_EXCEEDED="$(awk "BEGIN {print (${TOTAL_COST} > ${MAX_COST_USD})}" 2>/dev/null || echo "0")"
+            COST_EXCEEDED="$(awk "BEGIN {print (${CUMULATIVE_COST} > ${MAX_COST_USD})}" 2>/dev/null || echo "0")"
             if [[ "${COST_EXCEEDED}" == "1" ]]; then
-              echo "❌ Cost limit exceeded: $${TOTAL_COST} > $${MAX_COST_USD}"
+              echo "❌ Cost limit exceeded: $${CUMULATIVE_COST} > $${MAX_COST_USD}"
+              echo "📊 Final cost tracking saved to: ${COST_TRACKING_FILE}"
               exit 1
             fi
             
-            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS} (total cost so far: ~$${TOTAL_COST})..."
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS} (session: ~$${SESSION_COST}, cumulative: ~$${CUMULATIVE_COST})..."
             
             # Ask Claude for the tag using the structure
             TAG_REQ="$(jq -n \
@@ -154,19 +186,25 @@ jobs:
             COST="$(python3 -c "print((${INPUT_TOKENS} * 3 + ${OUTPUT_TOKENS} * 15) / 1000000)" 2>/dev/null || \
               awk "BEGIN {printf \"%.6f\", (${INPUT_TOKENS} * 3 + ${OUTPUT_TOKENS} * 15) / 1000000}" 2>/dev/null || \
               echo "0.01")"
-            TOTAL_COST="$(python3 -c "print(${TOTAL_COST} + ${COST})" 2>/dev/null || \
-              awk "BEGIN {printf \"%.6f\", ${TOTAL_COST} + ${COST}}" 2>/dev/null || \
-              echo "$(echo "${TOTAL_COST} + 0.01" | awk '{print $1 + $3}' 2>/dev/null || echo "${TOTAL_COST}")")"
+            SESSION_COST="$(python3 -c "print(${SESSION_COST} + ${COST})" 2>/dev/null || \
+              awk "BEGIN {printf \"%.6f\", ${SESSION_COST} + ${COST}}" 2>/dev/null || \
+              echo "${SESSION_COST}")"
+            CUMULATIVE_COST="$(python3 -c "print(${CUMULATIVE_COST} + ${COST})" 2>/dev/null || \
+              awk "BEGIN {printf \"%.6f\", ${CUMULATIVE_COST} + ${COST}}" 2>/dev/null || \
+              echo "${CUMULATIVE_COST}")"
+            
+            # Save to file after each request
+            save_cost "$CUMULATIVE_COST"
             
             CHOSEN_TAG="$(echo "$TAG_RESP" | jq -r '.content[0].text' | head -n 1 | tr -d '\r' | xargs | sed 's/^[^a-zA-Z0-9]*//;s/[^a-zA-Z0-9-]*$//')"
             
             if [[ -z "${CHOSEN_TAG:-}" || "${CHOSEN_TAG}" == "null" ]]; then
-              echo "⚠️ Claude returned empty tag, retrying..."
+              echo "⚠️ Claude returned empty tag, retrying... (cost so far: ~$${CUMULATIVE_COST})"
               sleep 1
               continue
             fi
             
-            echo "  Claude suggested tag: ${CHOSEN_TAG} (cost: ~$${COST})"
+            echo "  Claude suggested tag: ${CHOSEN_TAG} (cost: ~$${COST}, cumulative: ~$${CUMULATIVE_COST})"
             
             # Test if the tag works by trying to pull the image
             UPSTREAM_IMAGE="ghcr.io/game-ci/unity-editor:${CHOSEN_TAG}"
@@ -183,11 +221,15 @@ jobs:
           done
           
           if [[ -z "${CHOSEN_TAG:-}" ]]; then
-            echo "❌ Failed to get valid tag after ${MAX_ATTEMPTS} attempts (total cost: ~$${TOTAL_COST})"
+            echo "❌ Failed to get valid tag after ${MAX_ATTEMPTS} attempts"
+            echo "📊 Session cost: ~$${SESSION_COST} USD, Cumulative cost: ~$${CUMULATIVE_COST} USD"
+            echo "📊 Cost tracking saved to: ${COST_TRACKING_FILE}"
             exit 1
           fi
           
-          echo "✅ Successfully found valid tag: ${CHOSEN_TAG} (total cost: ~$${TOTAL_COST})"
+          echo "✅ Successfully found valid tag: ${CHOSEN_TAG}"
+          echo "📊 Session cost: ~$${SESSION_COST} USD, Cumulative cost: ~$${CUMULATIVE_COST} USD"
+          echo "📊 Cost tracking saved to: ${COST_TRACKING_FILE}"
 
           UPSTREAM_IMAGE="ghcr.io/game-ci/unity-editor:${CHOSEN_TAG}"
 
