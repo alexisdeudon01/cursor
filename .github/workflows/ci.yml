@@ -104,8 +104,11 @@ jobs:
           PROMPT_STRUCTURE="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.content[0].text' | tr -d '\r')"
           INPUT_TOKENS_1="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.usage.input_tokens // 0')"
           OUTPUT_TOKENS_1="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.usage.output_tokens // 0')"
-          COST_1="$(echo "scale=6; (${INPUT_TOKENS_1} * 3 + ${OUTPUT_TOKENS_1} * 15) / 1000000" | bc -l 2>/dev/null || echo "0.01")"
-          TOTAL_COST="$(echo "scale=6; ${TOTAL_COST} + ${COST_1}" | bc -l 2>/dev/null || echo "0.01")"
+          # Calculate cost: Input $3/MTok, Output $15/MTok
+          COST_1="$(python3 -c "print((${INPUT_TOKENS_1} * 3 + ${OUTPUT_TOKENS_1} * 15) / 1000000)" 2>/dev/null || \
+            awk "BEGIN {printf \"%.6f\", (${INPUT_TOKENS_1} * 3 + ${OUTPUT_TOKENS_1} * 15) / 1000000}" 2>/dev/null || \
+            echo "0.01")"
+          TOTAL_COST="${COST_1}"
           
           echo "Prompt structure received (cost: ~$${COST_1})"
           echo "Structure: ${PROMPT_STRUCTURE:0:200}..."
@@ -124,8 +127,9 @@ jobs:
           while [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
             ATTEMPT=$((ATTEMPT + 1))
             
-            # Check cost limit
-            if (( $(echo "${TOTAL_COST} > ${MAX_COST_USD}" | bc -l 2>/dev/null || echo "0") )); then
+            # Check cost limit (using awk for comparison since it's more widely available)
+            COST_EXCEEDED="$(awk "BEGIN {print (${TOTAL_COST} > ${MAX_COST_USD})}" 2>/dev/null || echo "0")"
+            if [[ "${COST_EXCEEDED}" == "1" ]]; then
               echo "❌ Cost limit exceeded: $${TOTAL_COST} > $${MAX_COST_USD}"
               exit 1
             fi
@@ -146,8 +150,13 @@ jobs:
             
             INPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.input_tokens // 0')"
             OUTPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.output_tokens // 0')"
-            COST="$(echo "scale=6; (${INPUT_TOKENS} * 3 + ${OUTPUT_TOKENS} * 15) / 1000000" | bc -l 2>/dev/null || echo "0.01")"
-            TOTAL_COST="$(echo "scale=6; ${TOTAL_COST} + ${COST}" | bc -l 2>/dev/null || echo "$(echo "${TOTAL_COST} + 0.01" | bc -l)")"
+            # Calculate cost: Input $3/MTok, Output $15/MTok
+            COST="$(python3 -c "print((${INPUT_TOKENS} * 3 + ${OUTPUT_TOKENS} * 15) / 1000000)" 2>/dev/null || \
+              awk "BEGIN {printf \"%.6f\", (${INPUT_TOKENS} * 3 + ${OUTPUT_TOKENS} * 15) / 1000000}" 2>/dev/null || \
+              echo "0.01")"
+            TOTAL_COST="$(python3 -c "print(${TOTAL_COST} + ${COST})" 2>/dev/null || \
+              awk "BEGIN {printf \"%.6f\", ${TOTAL_COST} + ${COST}}" 2>/dev/null || \
+              echo "$(echo "${TOTAL_COST} + 0.01" | awk '{print $1 + $3}' 2>/dev/null || echo "${TOTAL_COST}")")"
             
             CHOSEN_TAG="$(echo "$TAG_RESP" | jq -r '.content[0].text' | head -n 1 | tr -d '\r' | xargs | sed 's/^[^a-zA-Z0-9]*//;s/[^a-zA-Z0-9-]*$//')"
             
