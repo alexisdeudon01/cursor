@@ -52,13 +52,8 @@ jobs:
           docker version
           docker info | sed -n '1,140p'
 
-      - name: Login to GHCR (for pull/push cache)
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Resolve latest compatible Unity Editor image (Claude chooses) + push cache to your GHCR
+      - name: Resolve latest compatible Unity Editor image (Claude chooses)
         id: resolve_image
         shell: bash
         env:
@@ -142,22 +137,16 @@ jobs:
           fi
 
           UPSTREAM_IMAGE="ghcr.io/game-ci/unity-editor:${CHOSEN_TAG}"
-          CACHE_IMAGE="ghcr.io/${{ github.repository_owner }}/unity-editor-cache:${CHOSEN_TAG}"
 
           echo "Chosen upstream image: ${UPSTREAM_IMAGE}"
-          echo "Will cache to:         ${CACHE_IMAGE}"
 
-          echo "Pull upstream..."
+          echo "Pull upstream image..."
           docker pull "${UPSTREAM_IMAGE}"
-
-          echo "Tag + push cache..."
-          docker tag "${UPSTREAM_IMAGE}" "${CACHE_IMAGE}"
-          docker push "${CACHE_IMAGE}"
 
           # Export for next steps
           echo "UNITY_VERSION=${UNITY_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "UNITY_EDITOR_IMAGE=${CACHE_IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "UNITY_EDITOR_IMAGE=${CACHE_IMAGE}" >> "$GITHUB_ENV"
+          echo "UNITY_EDITOR_IMAGE=${UPSTREAM_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "UNITY_EDITOR_IMAGE=${UPSTREAM_IMAGE}" >> "$GITHUB_ENV"
 
       - name: Unity compile + tests with Claude AutoFix (up to 5 iters)
         shell: bash
