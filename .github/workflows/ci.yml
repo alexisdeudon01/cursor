@@ -93,7 +93,7 @@ jobs:
           # Default model if vars.ANTHROPIC_MODEL is empty
           MODEL="${ANTHROPIC_MODEL:-claude-3-5-sonnet-20241022}"
 
-          PROMPT=$'You are selecting the best Docker tag for running Unity CI on Linux. Context: - Unity version must match exactly: '${UNITY_VERSION}$'\n'  '- Prefer tags that work best for CI builds/tests. If multiple, prefer IL2CPP images.\n'  '- Output STRICTLY one line: the chosen tag only (no quotes, no explanation).\n\n'  'Candidate tags:\n'${CANDIDATES}$'\n'$'\n'- Prefer tags that work best for CI builds/tests. If multiple, prefer IL2CPP images.\n'\'- Output STRICTLY one line: the chosen tag only (no quotes, no explanation).\n\n'\'Candidate tags:\n'${CANDIDATES}$'\n'$'\n''
+          PROMPT=$'You are selecting the best Docker tag for running Unity CI on Linux. Context:\n- Unity version must match exactly: '${UNITY_VERSION}$'\n- Prefer tags that work best for CI builds/tests. If multiple, prefer IL2CPP images.\n- Output STRICTLY one line: the chosen tag only (no quotes, no explanation).\n\nCandidate tags:\n'${CANDIDATES}$'\n'
 
           # If no key, just pick the first candidate (still works)
           if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
@@ -180,8 +180,7 @@ jobs:
           set -euo pipefail
           echo "==== Actions duration (proxy) ===="
           RUN_JSON="$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          DURATION_MS="$(echo "$RUN_JSON" | jq -r '.run_duration_ms // .duration_ms // 0')"
+          DURATION_MS="$(echo "$RUN_JSON" | jq -r '.run_duration_ms // .dfuration_ms // 0')"
           echo "run_duration_ms=$DURATION_MS"
-          python3 -c "import os; ms=int(os.environ.get('DURATION_MS','0') or 0); print(f'Approx runner time: {ms/60000:.2f} minutes' if ms else 'Could not read duration.')" \
-            DURATION_MS="$DURATION_MS"
+          DURATION_MS="$DURATION_MS" python3 -c "import os; ms=int(os.environ.get('DURATION_MS','0') or 0); print(f'Approx runner time: {ms/60000:.2f} minutes' if ms else 'Could not read duration.')"
           echo "Cost depends on your GitHub plan (minutes quota / billing)."
