@@ -74,7 +74,15 @@ jobs:
           echo "Unity version detected: ${UNITY_VERSION}"
 
           # Default model if vars.ANTHROPIC_MODEL is empty
-          MODEL="${ANTHROPIC_MODEL:-claude-3-5-sonnet-20241022}"
+          # Using claude-3-5-sonnet-20240620 (latest stable version)
+          MODEL="${ANTHROPIC_MODEL:-claude-3-5-sonnet-20240620}"
+          
+          echo "🔧 Configuration:"
+          echo "  - Platform: Linux (StandaloneLinux64)"
+          echo "  - Model: ${MODEL}"
+          echo "  - Max cost limit: $${MAX_COST_USD} USD"
+          echo "  - Max attempts: ${MAX_ATTEMPTS}"
+          echo "  - Cost tracking file: ${COST_TRACKING_FILE}"
           
           # Cost tracking (USD): Claude 3.5 Sonnet pricing
           # Input: ~$3/MTok, Output: ~$15/MTok
@@ -114,12 +122,20 @@ jobs:
             exit 1
           fi
           
+          echo ""
           echo "=== Step 1: Asking Claude for prompt structure ==="
+          echo "📡 Connecting to Anthropic API..."
+          echo "  - Endpoint: https://api.anthropic.com/v1/messages"
+          echo "  - Model: ${MODEL}"
+          echo "  - API Version: 2023-06-01"
           
           # Ask Claude for the prompt structure it wants
           PROMPT_STRUCTURE_REQ="$(jq -n \
             --arg model "$MODEL" \
-            '{model:$model, max_tokens:200, messages:[{role:"user", content:"I need to get the most recent Docker tag for Unity Editor from ghcr.io/game-ci/unity-editor. The Unity version is: {UNITY_VERSION}. Please provide me with a prompt structure (like a template) that you would like me to use to ask you for the specific tag. The structure should include placeholders for arguments like {UNITY_VERSION}. Output ONLY the prompt template, nothing else."}] }')"
+            '{model:$model, max_tokens:200, messages:[{role:"user", content:"I need to get the most recent Docker tag for Unity Editor from ghcr.io/game-ci/unity-editor for Linux platform. The Unity version is: {UNITY_VERSION}. Please provide me with a prompt structure (like a template) that you would like me to use to ask you for the specific tag. The structure should include placeholders for arguments like {UNITY_VERSION}. Output ONLY the prompt template, nothing else."}] }')"
+          
+          echo "📤 Sending request to API..."
+          REQUEST_START="$(date +%s)"
           
           # Make request to Anthropic API with error handling
           PROMPT_STRUCTURE_RESP="$(curl -sSL -w "\n%{http_code}" "https://api.anthropic.com/v1/messages" \
@@ -128,14 +144,22 @@ jobs:
             -H "anthropic-version: 2023-06-01" \
             -d "$PROMPT_STRUCTURE_REQ" 2>&1)"
           
+          REQUEST_END="$(date +%s)"
+          REQUEST_DURATION=$((REQUEST_END - REQUEST_START))
+          
           HTTP_CODE="$(echo "$PROMPT_STRUCTURE_RESP" | tail -n 1)"
           PROMPT_STRUCTURE_RESP="$(echo "$PROMPT_STRUCTURE_RESP" | head -n -1)"
           
+          echo "📥 Received response (HTTP ${HTTP_CODE}, duration: ${REQUEST_DURATION}s)"
+          
           if [[ "${HTTP_CODE}" != "200" ]]; then
             echo "❌ API request failed with HTTP ${HTTP_CODE}"
-            echo "Response: ${PROMPT_STRUCTURE_RESP:0:500}"
+            echo "📋 Error details:"
+            echo "${PROMPT_STRUCTURE_RESP}" | jq '.' 2>/dev/null || echo "${PROMPT_STRUCTURE_RESP:0:500}"
             exit 1
           fi
+          
+          echo "✅ API connection successful"
           
           PROMPT_STRUCTURE="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.content[0].text' | tr -d '\r')"
           INPUT_TOKENS_1="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.usage.input_tokens // 0')"
@@ -179,13 +203,18 @@ jobs:
               exit 1
             fi
             
+            echo ""
             echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS} (session: ~$${SESSION_COST}, cumulative: ~$${CUMULATIVE_COST})..."
+            echo "📡 Connecting to Anthropic API for tag request..."
             
             # Ask Claude for the tag using the structure
             TAG_REQ="$(jq -n \
               --arg model "$MODEL" \
               --arg text "$FINAL_PROMPT" \
               '{model:$model, max_tokens:100, messages:[{role:"user", content:$text}] }')"
+            
+            echo "📤 Sending tag request to API..."
+            REQUEST_START_TAG="$(date +%s)"
             
             # Make request to Anthropic API with error handling
             TAG_RESP_RAW="$(curl -sSL -w "\n%{http_code}" "https://api.anthropic.com/v1/messages" \
@@ -194,15 +223,23 @@ jobs:
               -H "anthropic-version: 2023-06-01" \
               -d "$TAG_REQ" 2>&1)"
             
+            REQUEST_END_TAG="$(date +%s)"
+            REQUEST_DURATION_TAG=$((REQUEST_END_TAG - REQUEST_START_TAG))
+            
             HTTP_CODE_TAG="$(echo "$TAG_RESP_RAW" | tail -n 1)"
             TAG_RESP="$(echo "$TAG_RESP_RAW" | head -n -1)"
             
+            echo "📥 Received response (HTTP ${HTTP_CODE_TAG}, duration: ${REQUEST_DURATION_TAG}s)"
+            
             if [[ "${HTTP_CODE_TAG}" != "200" ]]; then
               echo "⚠️ API request failed with HTTP ${HTTP_CODE_TAG}, retrying..."
-              echo "Response: ${TAG_RESP:0:300}"
+              echo "📋 Error details:"
+              echo "${TAG_RESP}" | jq '.' 2>/dev/null || echo "${TAG_RESP:0:300}"
               sleep 2
               continue
             fi
+            
+            echo "✅ API connection successful"
             
             INPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.input_tokens // 0')"
             OUTPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.output_tokens // 0')"
@@ -232,13 +269,21 @@ jobs:
             
             # Test if the tag works by trying to pull the image
             UPSTREAM_IMAGE="ghcr.io/game-ci/unity-editor:${CHOSEN_TAG}"
-            echo "  Testing tag: ${UPSTREAM_IMAGE}..."
+            echo "  🐳 Testing Docker tag: ${UPSTREAM_IMAGE}"
+            echo "  📡 Connecting to GHCR (GitHub Container Registry)..."
             
+            PULL_START="$(date +%s)"
             if docker pull "${UPSTREAM_IMAGE}" >/dev/null 2>&1; then
-              echo "  ✅ Tag ${CHOSEN_TAG} is valid and pullable!"
+              PULL_END="$(date +%s)"
+              PULL_DURATION=$((PULL_END - PULL_START))
+              echo "  ✅ Tag ${CHOSEN_TAG} is valid and pullable! (duration: ${PULL_DURATION}s)"
+              echo "  ✅ Image ready for Linux platform (StandaloneLinux64)"
               break
             else
-              echo "  ⚠️ Tag ${CHOSEN_TAG} is not valid or not pullable, retrying..."
+              PULL_END="$(date +%s)"
+              PULL_DURATION=$((PULL_END - PULL_START))
+              echo "  ⚠️ Tag ${CHOSEN_TAG} is not valid or not pullable (duration: ${PULL_DURATION}s)"
+              echo "  📋 Docker pull failed, will retry with different tag..."
               CHOSEN_TAG=""
               sleep 2
             fi
