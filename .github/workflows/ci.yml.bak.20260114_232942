@@ -21,7 +21,8 @@ env:
   UNITY_LOG_DIR: .ci_logs
   MAX_AI_ITERS: "5"
 
-  # Prefer GHCR mirror (faster + fewer rate limits). Change tag si version Unity différente.
+  # Prefer GHCR mirror (faster + fewer rate limits). Fallback is handled in the script.
+  # ⚠️ If you use a different Unity version, change this tag.
   UNITY_EDITOR_IMAGE: ghcr.io/game-ci/unity-editor:ubuntu-6000.3.0f1-linux-il2cpp-3
 
 jobs:
@@ -71,15 +72,16 @@ jobs:
       - name: Unity compile + tests with Claude AutoFix (up to 5 iters)
         shell: bash
         env:
+          # ✅ Use what you already have in repo/org secrets or env.
           # Anthropic
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
-          # Unity licensing
+          # Unity licensing (set any that you use; script will pass through if defined)
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-          # GitHub
+          # GitHub (already provided by Actions, but we pass it explicitly to scripts)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
@@ -106,4 +108,10 @@ jobs:
           RUN_JSON="$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           DURATION_MS="$(python3 -c 'import json,sys; j=json.loads(sys.stdin.read()); print(j.get("run_duration_ms") or j.get("duration_ms") or 0)' <<< "$RUN_JSON")"
           echo "run_duration_ms=$DURATION_MS"
-          python3 -c 'import math,sys; s=sys.argv[1]; ms=int(s) if s.isdigit() else 0; mins=(ms/60000) if ms else None; print(f"Approx runner time: {mins:.2f} minutes" if mins is not None else "Couldn'\''t read duration."); print("Cost depends on your GitHub plan (minutes quota / billing).")' "$DURATION_MS"
+          python3 - <<PY
+import math
+ms = int("$DURATION_MS") if str("$DURATION_MS").isdigit() else 0
+mins = ms/60000 if ms else None
+print(f"Approx runner time: {mins:.2f} minutes" if mins is not None else "Couldn't read duration.")
+print("Cost depends on your GitHub plan (minutes quota / billing).")
+PY
