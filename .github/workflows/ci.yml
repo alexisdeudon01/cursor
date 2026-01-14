@@ -70,103 +70,120 @@ jobs:
           fi
           echo "Unity version detected: ${UNITY_VERSION}"
 
-          echo "Fetching tags from ghcr.io/game-ci/unity-editor ..."
-          
-          # Try public access first (public packages don't require auth)
-          echo "Trying public access..."
-          TAGS_JSON="$(curl -fsSL "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000" 2>/dev/null || echo '')"
-          
-          # Check if we got valid JSON with tags (not an error)
-          if [[ -z "${TAGS_JSON:-}" ]] || echo "$TAGS_JSON" | jq -e '.errors' >/dev/null 2>&1; then
-            echo "Public access failed or returned error, trying with OCI token authentication..."
-            
-            # Get OCI registry token using correct endpoint format
-            # For GHCR, we need to use the token endpoint with proper scope
-            AUTH_RESPONSE="$(curl -fsSL \
-              -u "${GITHUB_ACTOR}:${GITHUB_TOKEN}" \
-              "https://ghcr.io/token?service=ghcr.io&scope=repository:game-ci/unity-editor:pull" 2>/dev/null || echo '{}')"
-            
-            REGISTRY_TOKEN="$(echo "$AUTH_RESPONSE" | jq -r '.token // empty')"
-            
-            if [[ -n "${REGISTRY_TOKEN:-}" ]]; then
-              echo "✅ Got OCI registry token, fetching tags..."
-              TAGS_JSON="$(curl -fsSL \
-                -H "Authorization: Bearer ${REGISTRY_TOKEN}" \
-                "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
-            else
-              echo "⚠️ Could not get OCI token, trying basic auth as fallback..."
-              # Fallback to basic auth
-              TAGS_JSON="$(curl -fsSL \
-                -u "${GITHUB_ACTOR}:${GITHUB_TOKEN}" \
-                "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
-            fi
-          else
-            echo "✅ Public access successful!"
-          fi
-          
-          # Validate we got valid tags data
-          if [[ -z "${TAGS_JSON:-}" ]] || ! echo "$TAGS_JSON" | jq -e '.tags' >/dev/null 2>&1; then
-            echo "❌ Failed to fetch tags from GHCR"
-            echo "Response: ${TAGS_JSON:0:500}"
-            exit 1
-          fi
-          
-          # Keep only likely linux editor tags for this exact Unity version
-          CANDIDATES="$(echo "$TAGS_JSON" | jq -r '.tags[]' \
-            | grep -E "^ubuntu-${UNITY_VERSION}-linux" \
-            | head -n 200 || true)"
-
-          if [[ -z "${CANDIDATES:-}" ]]; then
-            echo "❌ No tags found for ubuntu-${UNITY_VERSION}-linux*"
-            echo "Tip: check your ProjectVersion or switch Unity version."
-            exit 1
-          fi
-
-          echo "Candidate tags (first 30):"
-          echo "$CANDIDATES" | head -n 30
-
           # Default model if vars.ANTHROPIC_MODEL is empty
           MODEL="${ANTHROPIC_MODEL:-claude-3-5-sonnet-20241022}"
-
-          PROMPT=$'You are selecting the best Docker tag for running Unity CI on Linux. Context:\n- Unity version must match exactly: '${UNITY_VERSION}$'\n- Prefer tags that work best for CI builds/tests. If multiple, prefer IL2CPP images.\n- Output STRICTLY one line: the chosen tag only (no quotes, no explanation).\n\nCandidate tags:\n'${CANDIDATES}$'\n'
-
-          # If no key, just pick the first candidate (still works)
+          
+          # Cost tracking (USD): Claude 3.5 Sonnet pricing (approximate)
+          # Input: ~$3/MTok, Output: ~$15/MTok
+          # Average request: ~0.001-0.01 USD
+          ESTIMATED_COST_PER_REQUEST=0.01
+          MAX_COST_USD=100.0
+          TOTAL_COST=0.0
+          MAX_ATTEMPTS=10
+          ATTEMPT=0
+          CHOSEN_TAG=""
+          
           if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-            echo "⚠️ ANTHROPIC_API_KEY missing -> fallback to first candidate"
-            CHOSEN_TAG="$(echo "$CANDIDATES" | head -n 1)"
-          else
-            echo "Asking Claude to choose the best tag..."
-            REQ="$(jq -n \
+            echo "❌ ANTHROPIC_API_KEY missing -> cannot proceed"
+            exit 1
+          fi
+          
+          echo "=== Step 1: Asking Claude for prompt structure ==="
+          
+          # Ask Claude for the prompt structure it wants
+          PROMPT_STRUCTURE_REQ="$(jq -n \
+            --arg model "$MODEL" \
+            '{model:$model, max_tokens:200, messages:[{role:"user", content:"I need to get the most recent Docker tag for Unity Editor from ghcr.io/game-ci/unity-editor. The Unity version is: {UNITY_VERSION}. Please provide me with a prompt structure (like a template) that you would like me to use to ask you for the specific tag. The structure should include placeholders for arguments like {UNITY_VERSION}. Output ONLY the prompt template, nothing else."}] }')"
+          
+          PROMPT_STRUCTURE_RESP="$(curl -fsSL "https://api.anthropic.com/v1/messages" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "$PROMPT_STRUCTURE_REQ")"
+          
+          PROMPT_STRUCTURE="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.content[0].text' | tr -d '\r')"
+          INPUT_TOKENS_1="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.usage.input_tokens // 0')"
+          OUTPUT_TOKENS_1="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.usage.output_tokens // 0')"
+          COST_1="$(echo "scale=6; (${INPUT_TOKENS_1} * 3 + ${OUTPUT_TOKENS_1} * 15) / 1000000" | bc -l 2>/dev/null || echo "0.01")"
+          TOTAL_COST="$(echo "scale=6; ${TOTAL_COST} + ${COST_1}" | bc -l 2>/dev/null || echo "0.01")"
+          
+          echo "Prompt structure received (cost: ~$${COST_1})"
+          echo "Structure: ${PROMPT_STRUCTURE:0:200}..."
+          
+          if [[ -z "${PROMPT_STRUCTURE:-}" || "${PROMPT_STRUCTURE}" == "null" ]]; then
+            echo "❌ Failed to get prompt structure from Claude"
+            exit 1
+          fi
+          
+          # Replace placeholders in the structure with actual values
+          FINAL_PROMPT="$(echo "$PROMPT_STRUCTURE" | sed "s/{UNITY_VERSION}/${UNITY_VERSION}/g")"
+          
+          echo ""
+          echo "=== Step 2: Asking Claude for Docker tag (with retries) ==="
+          
+          while [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            
+            # Check cost limit
+            if (( $(echo "${TOTAL_COST} > ${MAX_COST_USD}" | bc -l 2>/dev/null || echo "0") )); then
+              echo "❌ Cost limit exceeded: $${TOTAL_COST} > $${MAX_COST_USD}"
+              exit 1
+            fi
+            
+            echo "Attempt ${ATTEMPT}/${MAX_ATTEMPTS} (total cost so far: ~$${TOTAL_COST})..."
+            
+            # Ask Claude for the tag using the structure
+            TAG_REQ="$(jq -n \
               --arg model "$MODEL" \
-              --arg text "$PROMPT" \
-              '{model:$model, max_tokens:80, messages:[{role:"user", content:$text}] }')"
-
-            RESP="$(curl -fsSL "https://api.anthropic.com/v1/messages" \
+              --arg text "$FINAL_PROMPT" \
+              '{model:$model, max_tokens:100, messages:[{role:"user", content:$text}] }')"
+            
+            TAG_RESP="$(curl -fsSL "https://api.anthropic.com/v1/messages" \
               -H "content-type: application/json" \
               -H "x-api-key: ${ANTHROPIC_API_KEY}" \
               -H "anthropic-version: 2023-06-01" \
-              -d "$REQ")"
-
-            CHOSEN_TAG="$(echo "$RESP" | jq -r '.content[0].text' | head -n 1 | tr -d '\r' | xargs)"
+              -d "$TAG_REQ")"
+            
+            INPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.input_tokens // 0')"
+            OUTPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.output_tokens // 0')"
+            COST="$(echo "scale=6; (${INPUT_TOKENS} * 3 + ${OUTPUT_TOKENS} * 15) / 1000000" | bc -l 2>/dev/null || echo "0.01")"
+            TOTAL_COST="$(echo "scale=6; ${TOTAL_COST} + ${COST}" | bc -l 2>/dev/null || echo "$(echo "${TOTAL_COST} + 0.01" | bc -l)")"
+            
+            CHOSEN_TAG="$(echo "$TAG_RESP" | jq -r '.content[0].text' | head -n 1 | tr -d '\r' | xargs | sed 's/^[^a-zA-Z0-9]*//;s/[^a-zA-Z0-9-]*$//')"
+            
             if [[ -z "${CHOSEN_TAG:-}" || "${CHOSEN_TAG}" == "null" ]]; then
-              echo "⚠️ Claude returned empty -> fallback to first candidate"
-              CHOSEN_TAG="$(echo "$CANDIDATES" | head -n 1)"
+              echo "⚠️ Claude returned empty tag, retrying..."
+              sleep 1
+              continue
             fi
-
-            # Safety: ensure chosen tag is in candidates, else fallback
-            if ! echo "$CANDIDATES" | grep -qx "$CHOSEN_TAG"; then
-              echo "⚠️ Claude chose tag not in candidates: ${CHOSEN_TAG}"
-              echo "Fallback to first candidate."
-              CHOSEN_TAG="$(echo "$CANDIDATES" | head -n 1)"
+            
+            echo "  Claude suggested tag: ${CHOSEN_TAG} (cost: ~$${COST})"
+            
+            # Test if the tag works by trying to pull the image
+            UPSTREAM_IMAGE="ghcr.io/game-ci/unity-editor:${CHOSEN_TAG}"
+            echo "  Testing tag: ${UPSTREAM_IMAGE}..."
+            
+            if docker pull "${UPSTREAM_IMAGE}" >/dev/null 2>&1; then
+              echo "  ✅ Tag ${CHOSEN_TAG} is valid and pullable!"
+              break
+            else
+              echo "  ⚠️ Tag ${CHOSEN_TAG} is not valid or not pullable, retrying..."
+              CHOSEN_TAG=""
+              sleep 2
             fi
+          done
+          
+          if [[ -z "${CHOSEN_TAG:-}" ]]; then
+            echo "❌ Failed to get valid tag after ${MAX_ATTEMPTS} attempts (total cost: ~$${TOTAL_COST})"
+            exit 1
           fi
+          
+          echo "✅ Successfully found valid tag: ${CHOSEN_TAG} (total cost: ~$${TOTAL_COST})"
 
           UPSTREAM_IMAGE="ghcr.io/game-ci/unity-editor:${CHOSEN_TAG}"
 
           echo "Chosen upstream image: ${UPSTREAM_IMAGE}"
-
-          echo "Pull upstream image..."
-          docker pull "${UPSTREAM_IMAGE}"
+          echo "Note: Image already pulled during tag validation"
 
           # Export for next steps
           echo "UNITY_VERSION=${UNITY_VERSION}" >> "$GITHUB_OUTPUT"
