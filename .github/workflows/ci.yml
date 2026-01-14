@@ -76,7 +76,21 @@ jobs:
           echo "Unity version detected: ${UNITY_VERSION}"
 
           echo "Fetching tags from ghcr.io/game-ci/unity-editor ..."
-          TAGS_JSON="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
+          # Get OCI registry token first, then use it to fetch tags
+          # This is the proper way to authenticate with OCI registries
+          AUTH_RESPONSE="$(curl -fsSL \
+            -u "${GITHUB_ACTOR}:${GITHUB_TOKEN}" \
+            "https://ghcr.io/token?scope=repository:game-ci/unity-editor:pull&service=ghcr.io")"
+          REGISTRY_TOKEN="$(echo "$AUTH_RESPONSE" | jq -r '.token // empty')"
+          
+          if [[ -z "${REGISTRY_TOKEN:-}" ]]; then
+            echo "⚠️ Could not get registry token, trying public access..."
+            TAGS_JSON="$(curl -fsSL "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
+          else
+            TAGS_JSON="$(curl -fsSL \
+              -H "Authorization: Bearer ${REGISTRY_TOKEN}" \
+              "https://ghcr.io/v2/game-ci/unity-editor/tags/list?n=10000")"
+          fi
           # Keep only likely linux editor tags for this exact Unity version
           CANDIDATES="$(echo "$TAGS_JSON" | jq -r '.tags[]' \
             | grep -E "^ubuntu-${UNITY_VERSION}-linux" \
