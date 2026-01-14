@@ -79,11 +79,20 @@ jobs:
           targetPlatform: StandaloneLinux64
           buildMethod: BuildLinuxMono.PerformBuild
           buildsPath: build
-          useHub: true
+          customImage: unityci/editor:ubuntu-6000.3.0f1-linux-mono-3
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-build
+      - name: Upload Unity logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-logs
+          path: |
+            Library/Logs/Unity/Editor.log
+            Library/Logs/Unity/Upm.log
+          if-no-files-found: ignore
           path: build
           if-no-files-found: error
 
