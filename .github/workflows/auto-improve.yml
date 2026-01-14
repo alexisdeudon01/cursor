@@ -16,6 +16,8 @@ jobs:
   improve:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      AGENT_PATH: .cursor/agents/agent.md
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,7 +55,7 @@ jobs:
 
       - name: ✅ No-op
         if: steps.budget_pre.outputs.budget_skip_heavy != 'true'
-        run: echo "No agents. Clean, hourly, single-run with cancel-in-progress."
+        run: echo "Using agent definition at $AGENT_PATH"
 
       - name: 💸 Budget guard (post-run)
         if: always()
