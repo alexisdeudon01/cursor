@@ -17,6 +17,8 @@ permissions:
 
 env:
   UNITY_VERSION: 6000.3.0f1
+  # Force a lighter image (Mono) instead of huge il2cpp
+  UNITYCI_MONO_IMAGE: unityci/editor:ubuntu-6000.3.0f1-linux-mono-3
 
 jobs:
   tests:
@@ -42,9 +44,11 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          useHub: true
+          customImage: ${{ env.UNITYCI_MONO_IMAGE }}
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload test artifacts (always)
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: |
@@ -79,11 +83,15 @@ jobs:
           targetPlatform: StandaloneLinux64
           buildMethod: BuildLinuxMono.PerformBuild
           buildsPath: build
-          customImage: unityci/editor:ubuntu-6000.3.0f1-linux-mono-3
+          customImage: ${{ env.UNITYCI_MONO_IMAGE }}
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload linux build
+        uses: actions/upload-artifact@v4
         with:
           name: linux-build
+          path: build
+          if-no-files-found: error
+
       - name: Upload Unity logs (always)
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,8 +101,6 @@ jobs:
             Library/Logs/Unity/Editor.log
             Library/Logs/Unity/Upm.log
           if-no-files-found: ignore
-          path: build
-          if-no-files-found: error
 
   claude-autopr:
     runs-on: ubuntu-latest
