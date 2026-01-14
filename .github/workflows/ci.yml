@@ -42,6 +42,7 @@ jobs:
         with:
           unityVersion: ${{ env.UNITY_VERSION }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+          testMode: all
 
       - name: Upload test artifacts (always)
         if: always()
@@ -69,7 +70,7 @@ jobs:
           restore-keys: |
             Library-${{ runner.os }}-
 
-      - name: Build Linux (Mono forced)
+      - name: Build Linux
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
