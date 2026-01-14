@@ -16,6 +16,8 @@ jobs:
   improve:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      AGENT_PATH: .cursor/agents/agent.md
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,5 +30,37 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
+      - name: 🕒 Budget start
+        id: budget_start
+        run: echo "budget_start_ts=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: 💸 Budget guard (pré-run)
+        id: budget_pre
+        run: python3 .github/scripts/budget_guard.py
+        env:
+          BUDGET_EUR: "200"
+
+      - name: ⛔ Budget dépassé (skip)
+        if: steps.budget_pre.outputs.budget_skip_heavy == 'true'
+        run: echo "Budget mensuel atteint, on saute les étapes lourdes."
+
+      - name: 🐳 Docker evaluation guard
+        if: steps.budget_pre.outputs.budget_skip_heavy != 'true'
+        run: |
+          if command -v docker >/dev/null 2>&1; then
+            docker info >/dev/null 2>&1 || echo "Docker non disponible, évaluation docker ignorée."
+          else
+            echo "Docker absent, évaluation docker ignorée."
+          fi
+
       - name: ✅ No-op
-        run: echo "No agents. Clean, hourly, single-run with cancel-in-progress."
+        if: steps.budget_pre.outputs.budget_skip_heavy != 'true'
+        run: echo "Using agent definition at $AGENT_PATH"
+
+      - name: 💸 Budget guard (post-run)
+        if: always()
+        run: python3 .github/scripts/budget_guard.py
+        env:
+          BUDGET_EUR: "200"
+          PHASE: post
+          BUDGET_START_TS: ${{ steps.budget_start.outputs.budget_start_ts }}

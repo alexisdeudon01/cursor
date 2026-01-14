@@ -11,9 +11,16 @@ model: fast
 
 ---
 
+## 0. Emplacement de référence
+
+- **Cet agent est défini dans** : `.cursor/agents/agent.md`.
+- Toute autre documentation doit **référencer ce fichier** comme source d’autorité.
+
+---
+
 ## 1. Mission
 
-Développer un jeu 2D client-serveur avec serveur **full authoritative** et architecture **Data-Oriented Design**.
+Développer un jeu 2D client-serveur avec serveur **full authoritative** et architecture **Data‑Oriented Design**.
 
 ---
 
@@ -26,276 +33,100 @@ Développer un jeu 2D client-serveur avec serveur **full authoritative** et arch
 | **DOD** | Structs pour données réseau |
 | **Single Executable** | UN seul build, distinction par arguments |
 | **NGO Only** | Netcode for GameObjects uniquement |
-| **No Third-Party** | Aucun service tiers (Unity Services, etc.) |
+| **No Third‑Party** | Aucun service tiers (Unity Services, etc.) |
+| **No Copilot** | Aucun agent Copilot |
 
 ---
 
-## 3. Règles Réseau - NETCODE FOR GAMEOBJECTS (NGO)
+## 3. Source de vérité : fichiers `.unity` (et `.asset` si nécessaire)
 
-### ⚠️ RÈGLE CRITIQUE : NGO UNIQUEMENT
+### ✅ RÈGLE CRITIQUE
+La **structure du projet** (scènes, flux, objets) doit être **déterminée uniquement à partir des fichiers `.unity`** (et des `.asset` si nécessaire).
 
-**UTILISER :**
-- ✅ `Unity.Netcode` (Netcode for GameObjects)
-- ✅ `Unity.Netcode.Transports.UTP` (Unity Transport)
-- ✅ Packages du repo Unity officiel uniquement
+### Qu’est‑ce qu’un fichier `.unity` ?
+- Un **fichier de scène Unity** (format YAML sérialisé) qui décrit la hiérarchie d’objets, composants, références et paramètres.
+- C’est la **seule source fiable** pour comprendre la structure réelle des scènes.
 
-**INTERDIT :**
-- ❌ Unity Services (Relay, Lobby, Matchmaking, etc.)
-- ❌ Unity Gaming Services (UGS)
-- ❌ Photon, Mirror, FishNet ou autres solutions réseau
-- ❌ Services cloud tiers (AWS, Firebase, etc.)
-- ❌ Tout package non-officiel Unity
+### Qu’est‑ce qu’un fichier `.asset` ?
+- Un **asset Unity sérialisé** (ex. ScriptableObject) qui contient des données de configuration nécessaires à l’interprétation des scènes.
+- Il peut être consulté **uniquement si** l’information structurelle n’est pas explicite dans les `.unity`.
 
-### Packages autorisés (Unity Registry uniquement)
-
-```json
-{
-  "dependencies": {
-    "com.unity.netcode.gameobjects": "2.x.x",
-    "com.unity.transport": "2.x.x",
-    "com.unity.collections": "2.x.x",
-    "com.unity.burst": "1.x.x",
-    "com.unity.mathematics": "1.x.x",
-    "com.unity.inputsystem": "1.x.x",
-    "com.unity.ui": "2.x.x",
-    "com.unity.render-pipelines.universal": "17.x.x"
-  }
-}
-```
-
-### Composants NGO existants dans le projet
-
-Le projet contient déjà une architecture NGO complète :
-
-```
-Assets/Scripts/Networking/
-├── Client/
-│   ├── ClientBootstrap.cs      ← Bootstrap client
-│   └── Client.asmdef
-├── Server/
-│   ├── ServerBootstrap.cs      ← Bootstrap serveur
-│   ├── ConnectionController.cs ← Gestion connexions
-│   └── Server.asmdef
-├── Connections/
-│   ├── NetworkBootstrap.cs     ← Bootstrap réseau principal
-│   ├── NetworkConfigProvider.cs
-│   └── AppNetworkConfig.cs
-├── Player/
-│   ├── SessionRpcHub.cs        ← Hub RPC principal
-│   ├── PlayerManager.cs
-│   └── NetworkClientRegistry.cs
-├── Sessions/
-│   ├── GameSessionManager.cs   ← Gestion des sessions
-│   ├── GameSession.cs
-│   └── SessionState.cs
-├── RpcHandlers/
-│   ├── Base/BaseRpcHandler.cs
-│   └── Handlers/
-│       ├── GameStartHandler.cs
-│       ├── PlayerMovementHandler.cs
-│       ├── SceneLoadHandler.cs
-│       ├── SessionLifecycleHandler.cs
-│       └── SessionQueryHandler.cs
-└── StateSync/
-    ├── GameCommandClient.cs
-    ├── SessionRegistry.cs
-    └── ClientRegistry.cs
-```
+### Interdictions
+- ❌ **Ne pas** déduire la structure à partir d’un README, d’un listing de dossier ou d’un diagramme existant.
+- ❌ **Ne pas** écrire dans les fichiers `.unity` (lecture seule).
 
 ---
 
-## 4. Architecture UN SEUL BUILD
+## 4. Fichiers Unity et `.meta`
 
-### Structure des scènes existantes
+### `.meta`
+- Chaque fichier Unity (scène, prefab, script, asset) possède un **fichier `.meta`** associé.
+- Le `.meta` contient le **GUID** et des métadonnées critiques utilisées par Unity pour les références.
+- **Ne jamais modifier** les `.meta` manuellement, sous peine de casser les liens entre assets.
 
-```
-Assets/Scenes/
-├── Server.unity       ← Chargée si --server (headless)
-├── Client.unity       ← Chargée si --client (entrée)
-├── Menu.unity         ← Menu principal
-└── Game.unity         ← Scène de jeu
-```
-
-### Bootstrap existant
-
-Le projet utilise déjà un système de bootstrap :
-- `ServerBootstrap.cs` : Démarre le serveur
-- `ClientBootstrap.cs` : Démarre le client
-- `NetworkBootstrap.cs` : Configuration réseau
+### Fichiers autorisés à la modification
+- ✅ Scripts C#.
+- ✅ UXML / USS.
+- ✅ Documentation (README, agent, etc.).
+- ✅ Manifests Unity (Registry uniquement).
+- ❌ `.unity`, `.prefab`, `.meta` (lecture seule).
 
 ---
 
-## 5. Client Full Graphique - UI TOOLKIT
+## 5. Règles réseau NGO
 
-### ⚠️ RÈGLE : Le client utilise UI Toolkit (UXML + USS)
-
-Le projet contient déjà des fichiers UI Toolkit :
-
-```
-Assets/UI Toolkit/
-├── ConnectionUI.uxml
-├── NetworkBootstrapOverlay.uxml
-├── NetworkBootstrapOverlay.uss
-├── NetworkBootstrapProgress.uxml
-├── SessionLobby.uxml
-├── SessionLobby.uss
-└── SessionLobby_FlowGuide.uss
-```
-
-### Scripts UI existants
-
-```
-Assets/Scripts/UI/
-├── ConnectionUIController.cs
-├── SessionLobbyUI.cs
-├── GameCanvasManager.cs
-├── ProgressIndicator.cs
-├── ToastNotification.cs
-├── Common/
-│   ├── UIManager.cs
-│   ├── PopupBase.cs
-│   ├── ConfirmPopup.cs
-│   └── InputPopup.cs
-└── NetworkBootstrap/
-    ├── NetworkBootstrapProgressViewClient.cs
-    └── NetworkBootstrapProgress.uss
-```
+- **NGO uniquement** (Unity.Netcode + Unity Transport).
+- **StartServer()** et **jamais** StartHost().
+- Pas de services cloud tiers.
 
 ---
 
-## 6. Règles serveur
+## 6. Auto‑amélioration & UML
 
-```csharp
-// ✅ CORRECT - Dans ServerBootstrap.cs
-NetworkManager.Singleton.StartServer();
+### UML (générer à chaque itération)
+Produire **tous les diagrammes UML pertinents** :
+- **Classes**, **Séquences**, **États**, **Activités**, **Composants**, **Déploiement**.
 
-// ❌ INTERDIT
-NetworkManager.Singleton.StartHost();  // Jamais !
-```
-
-Le serveur :
-- Charge Server.unity uniquement
-- Valide tous les inputs via RpcHandlers
-- Gère les sessions via GameSessionManager
-- Aucun rendu graphique (headless possible)
-
----
-
-## 7. Data-Oriented Design (DOD)
-
-### Structs existantes dans le projet
-
-```csharp
-// Assets/Scripts/Networking/Data/
-PlayerNetworkData.cs   // Données joueur réseau
-ClientNetworkData.cs   // Données client
-
-// Assets/Scripts/Core/StateSync/
-GameCommandProtocol.cs // Protocole commandes
-MapConfigData.cs       // Configuration map
-```
+### Algorithmes d’amélioration via Codex
+Le pipeline peut sélectionner un modèle via Codex pour **évaluer** et **améliorer** le code. Propositions :
+- **Diff‑based snapshotting** : snapshots et régressions sur base de diffs.
+- **Interest Management** : filtrage réseau spatial/zone.
+- **Input Prediction + Reconciliation** côté client (autorité serveur maintenue).
+- **Delta Compression** et **packing binaire**.
+- **State hashing** pour validation serveur.
+- **Event batching** pour réduire la charge réseau.
 
 ---
 
-## 8. Prefabs réseau existants
+## 7. Testing (propositions “smart variables”)
 
-```
-Assets/Prefabs/Network/
-├── NetworkManagerRoot.prefab   ← NetworkManager principal
-├── SessionRpcHub.prefab        ← Hub RPC
-├── NetworkBootstrapUI.prefab   ← UI bootstrap
-└── Square.prefab               ← Prefab test
+Variables de test recommandées :
+- `SIM_SEED` (reproductibilité),
+- `NET_TICK_RATE` (tps/s),
+- `MAX_PLAYERS`,
+- `JITTER_MS`,
+- `PACKET_LOSS_PCT`,
+- `SNAPSHOT_RATE`,
+- `INPUT_BUFFER_MS`,
+- `SERVER_AUTHORITY_STRICT`,
+- `STATE_HASH_INTERVAL`.
 
-Assets/Prefabs/Pawns/
-└── CirclePawn.prefab           ← Pawn joueur
-```
-
----
-
-## 9. Games existants
-
-Le projet supporte plusieurs types de jeux :
-
-```
-Assets/Scripts/Games/
-├── CircleGame/
-│   ├── CircleGameDefinition.cs
-│   └── CirclePawn.cs
-└── SquareGame/
-    └── SquareGameDefinition.cs
-
-Assets/Resources/Games/
-├── CircleGame.asset
-└── SquareGame.asset
-```
+Objectifs de tests :
+- **Autorité serveur** stricte.
+- **Stabilité** sous perte/jitter.
+- **Évolutivité** (n joueurs).
 
 ---
 
-## 10. Auto-Amélioration
+## 8. Workflow attendu
 
-### Métriques d'évaluation
-
-| Métrique | Poids | Description |
-|----------|-------|-------------|
-| Server Authority | 20% | StartServer(), pas StartHost() |
-| NGO Compliance | 20% | Netcode only, pas de services tiers |
-| Single Build | 10% | Un seul exécutable |
-| UI Toolkit | 15% | UXML + USS |
-| DOD Compliance | 15% | Structs INetworkSerializable |
-| Network Flow | 10% | Séquence correcte via RpcHandlers |
-| Build Success | 10% | Compilation OK |
-
-### Ce que l'agent peut améliorer
-
-- ✅ Scripts C# dans Assets/Scripts/
-- ✅ Fichiers UXML dans Assets/UI Toolkit/
-- ✅ Fichiers USS dans Assets/UI Toolkit/
-- ✅ Ce fichier agent.md (lui-même)
-- ✅ Packages/manifest.json (Unity Registry only)
-- ✅ Documentation
-- ❌ Fichiers Unity binaires (.unity, .prefab) - lecture seule
-- ❌ Services tiers - JAMAIS
-
-### Checklist avant commit
-
-- [ ] Pas de `StartHost()` → utilise `StartServer()`
-- [ ] Pas de `using Unity.Services.*`
-- [ ] Données réseau = structs avec `INetworkSerializable`
-- [ ] UI = UXML + USS
-- [ ] Packages = Unity Registry uniquement
+- **Exécution horaire** du workflow d’amélioration.
+- **Arrêt si coût total > 200€** (guard budgétaire).
+- **Push à chaque étape** si le workflow est autorisé.
+- **Pas d’approbation** requise.
+- **Fonctionnement headless** (machine éteinte). 
 
 ---
 
-## 11. Structure du projet
-
-```
-Assets/
-├── Editor/                 ← Scripts éditeur
-├── Prefabs/
-│   ├── Network/           ← Prefabs réseau
-│   ├── Pawns/             ← Prefabs joueurs
-│   └── UI/                ← Prefabs UI
-├── Resources/
-│   ├── Games/             ← Définitions jeux
-│   └── NetworkConfig.asset
-├── Scenes/
-│   ├── Server.unity       ← Serveur headless
-│   ├── Client.unity       ← Client graphique
-│   ├── Menu.unity
-│   └── Game.unity
-├── Scripts/
-│   ├── Core/              ← Logique métier
-│   ├── Game/              ← Gameplay
-│   ├── Games/             ← Définitions jeux
-│   ├── Networking/        ← NGO complet
-│   ├── Service/           ← Services locaux
-│   └── UI/                ← Controllers UI
-├── Settings/              ← URP, Build Profiles
-├── TextMesh Pro/          ← Fonts
-└── UI Toolkit/            ← UXML + USS
-```
-
----
-
-*Dernière mise à jour: AUTO_DATE*
+*Dernière mise à jour: AUTO_DATE*  
 *Score actuel: AUTO_SCORE*
