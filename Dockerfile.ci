@@ -1,0 +1,6 @@
+# Remplace le tag par un tag unityci/editor qui existe pour 6000.3.0f1
+FROM unityci/editor:ubuntu-6000.3.0f1-base-3
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    jq git-lfs zip unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
