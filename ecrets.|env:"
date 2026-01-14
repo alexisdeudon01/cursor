@@ -1,0 +1,26 @@
+[35m.github/scripts/evaluate_changes.py[m[36m:[m[32m10[m[36m:[mAPI_KEY = os.environ.get("[1;31mANTHROPIC_API_KEY[m")
+[35m.github/workflows/ci.yml[m[36m:[m[32m39[m[36m:[m          [1;31mUNITY_LICENSE[m: ${{ secrets.[1;31mUNITY_LICENSE[m }}
+[35m.github/workflows/ci.yml[m[36m:[m[32m40[m[36m:[m          [1;31mUNITY_EMAIL[m: ${{ secrets.[1;31mUNITY_EMAIL[m }}
+[35m.github/workflows/ci.yml[m[36m:[m[32m41[m[36m:[m          [1;31mUNITY_PASSWORD[m: ${{ secrets.[1;31mUNITY_PASSWORD[m }}
+[35m.github/workflows/ci.yml[m[36m:[m[32m76[m[36m:[m          [1;31mUNITY_LICENSE[m: ${{ secrets.[1;31mUNITY_LICENSE[m }}
+[35m.github/workflows/ci.yml[m[36m:[m[32m77[m[36m:[m          [1;31mUNITY_EMAIL[m: ${{ secrets.[1;31mUNITY_EMAIL[m }}
+[35m.github/workflows/ci.yml[m[36m:[m[32m78[m[36m:[m          [1;31mUNITY_PASSWORD[m: ${{ secrets.[1;31mUNITY_PASSWORD[m }}
+[35m.github/workflows/ci.yml[m[36m:[m[32m123[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260113-235339/auto-improve.yml.bak[m[36m:[m[32m54[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260113-235339/auto-improve.yml.bak[m[36m:[m[32m56[m[36m:[m          [ -z "$[1;31mANTHROPIC_API_KEY[m" ] && echo "MODE=basic" >> $GITHUB_ENV || echo "MODE=ai" >> $GITHUB_ENV
+[35m.patch-backups/20260113-235339/auto-improve.yml.bak[m[36m:[m[32m60[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260113-235339/auto-improve.yml.bak[m[36m:[m[32m67[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_000656/auto-improve.yml.bak[m[36m:[m[32m54[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_000656/auto-improve.yml.bak[m[36m:[m[32m56[m[36m:[m          [ -z "$[1;31mANTHROPIC_API_KEY[m" ] && echo "MODE=basic" >> $GITHUB_ENV || echo "MODE=ai" >> $GITHUB_ENV
+[35m.patch-backups/20260114_000656/auto-improve.yml.bak[m[36m:[m[32m60[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_000656/auto-improve.yml.bak[m[36m:[m[32m67[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_000748/auto-improve.yml.bak[m[36m:[m[32m54[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_000748/auto-improve.yml.bak[m[36m:[m[32m56[m[36m:[m          [ -z "$[1;31mANTHROPIC_API_KEY[m" ] && echo "MODE=basic" >> $GITHUB_ENV || echo "MODE=ai" >> $GITHUB_ENV
+[35m.patch-backups/20260114_000748/auto-improve.yml.bak[m[36m:[m[32m60[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_000748/auto-improve.yml.bak[m[36m:[m[32m67[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_003250/.github/workflows/auto-improve.yml.bak[m[36m:[m[32m76[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35m.patch-backups/20260114_003250/.github/workflows/auto-improve.yml.bak[m[36m:[m[32m78[m[36m:[m          if [ -n "$[1;31mANTHROPIC_API_KEY[m" ]; then
+[35m.patch-backups/20260114_003250/.github/workflows/auto-improve.yml.bak[m[36m:[m[32m96[m[36m:[m          [1;31mANTHROPIC_API_KEY[m: ${{ secrets.[1;31mANTHROPIC_API_KEY[m }}
+[35mpatch.sh[m[36m:[m[32m304[m[36m:[m    "          if [ -n \"${[1;31mANTHROPIC_API_KEY[m:-}\" ]; then\n"
+[35mscripts/codex_autopr.py[m[36m:[m[32m31[m[36m:[m    if not os.getenv("[1;31mANTHROPIC_API_KEY[m"):
+[35mscripts/codex_autopr.py[m[36m:[m[32m32[m[36m:[m        print("[1;31mANTHROPIC_API_KEY[m missing -> skipping codex step.")
