@@ -28,8 +28,8 @@ def read_file(p: str) -> str:
         return ""
 
 def main():
-    if not os.getenv("OPENAI_API_KEY"):
-        print("OPENAI_API_KEY missing -> skipping codex step.")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("ANTHROPIC_API_KEY missing -> skipping codex step.")
         return
 
     client = OpenAI()

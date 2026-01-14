@@ -144,7 +144,7 @@ jobs:
 
       - name: Run Codex auto-PR
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CODEX_MODEL: gpt-5-codex
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
