@@ -4,6 +4,9 @@ on:
   push:
     branches: [ "main" ]
   workflow_dispatch: {}
+  schedule:
+    # Run every 2 hours
+    - cron: '0 */2 * * *'
 
 permissions:
   contents: write
@@ -118,11 +121,21 @@ jobs:
             --arg model "$MODEL" \
             '{model:$model, max_tokens:200, messages:[{role:"user", content:"I need to get the most recent Docker tag for Unity Editor from ghcr.io/game-ci/unity-editor. The Unity version is: {UNITY_VERSION}. Please provide me with a prompt structure (like a template) that you would like me to use to ask you for the specific tag. The structure should include placeholders for arguments like {UNITY_VERSION}. Output ONLY the prompt template, nothing else."}] }')"
           
-          PROMPT_STRUCTURE_RESP="$(curl -fsSL "https://api.anthropic.com/v1/messages" \
+          # Make request to Anthropic API with error handling
+          PROMPT_STRUCTURE_RESP="$(curl -sSL -w "\n%{http_code}" "https://api.anthropic.com/v1/messages" \
             -H "content-type: application/json" \
             -H "x-api-key: ${ANTHROPIC_API_KEY}" \
             -H "anthropic-version: 2023-06-01" \
-            -d "$PROMPT_STRUCTURE_REQ")"
+            -d "$PROMPT_STRUCTURE_REQ" 2>&1)"
+          
+          HTTP_CODE="$(echo "$PROMPT_STRUCTURE_RESP" | tail -n 1)"
+          PROMPT_STRUCTURE_RESP="$(echo "$PROMPT_STRUCTURE_RESP" | head -n -1)"
+          
+          if [[ "${HTTP_CODE}" != "200" ]]; then
+            echo "❌ API request failed with HTTP ${HTTP_CODE}"
+            echo "Response: ${PROMPT_STRUCTURE_RESP:0:500}"
+            exit 1
+          fi
           
           PROMPT_STRUCTURE="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.content[0].text' | tr -d '\r')"
           INPUT_TOKENS_1="$(echo "$PROMPT_STRUCTURE_RESP" | jq -r '.usage.input_tokens // 0')"
@@ -134,7 +147,7 @@ jobs:
           SESSION_COST="$(python3 -c "print(${SESSION_COST} + ${COST_1})" 2>/dev/null || \
             awk "BEGIN {printf \"%.6f\", ${SESSION_COST} + ${COST_1}}" 2>/dev/null || \
             echo "${SESSION_COST}")"
-          CUMULATIVE_COST="$(python3 -c "print(${CdUMULATIVE_COST} + ${COST_1})" 2>/dev/null || \
+          CUMULATIVE_COST="$(python3 -c "print(${CUMULATIVE_COST} + ${COST_1})" 2>/dev/null || \
             awk "BEGIN {printf \"%.6f\", ${CUMULATIVE_COST} + ${COST_1}}" 2>/dev/null || \
             echo "${CUMULATIVE_COST}")"
           
@@ -174,11 +187,22 @@ jobs:
               --arg text "$FINAL_PROMPT" \
               '{model:$model, max_tokens:100, messages:[{role:"user", content:$text}] }')"
             
-            TAG_RESP="$(curl -fsSL "https://api.anthropic.com/v1/messages" \
+            # Make request to Anthropic API with error handling
+            TAG_RESP_RAW="$(curl -sSL -w "\n%{http_code}" "https://api.anthropic.com/v1/messages" \
               -H "content-type: application/json" \
               -H "x-api-key: ${ANTHROPIC_API_KEY}" \
               -H "anthropic-version: 2023-06-01" \
-              -d "$TAG_REQ")"
+              -d "$TAG_REQ" 2>&1)"
+            
+            HTTP_CODE_TAG="$(echo "$TAG_RESP_RAW" | tail -n 1)"
+            TAG_RESP="$(echo "$TAG_RESP_RAW" | head -n -1)"
+            
+            if [[ "${HTTP_CODE_TAG}" != "200" ]]; then
+              echo "⚠️ API request failed with HTTP ${HTTP_CODE_TAG}, retrying..."
+              echo "Response: ${TAG_RESP:0:300}"
+              sleep 2
+              continue
+            fi
             
             INPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.input_tokens // 0')"
             OUTPUT_TOKENS="$(echo "$TAG_RESP" | jq -r '.usage.output_tokens // 0')"
