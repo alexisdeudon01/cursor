@@ -75,7 +75,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
           # Unity licensing
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}secrets.UNITY
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
