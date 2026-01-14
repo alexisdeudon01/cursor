@@ -134,7 +134,7 @@ jobs:
           SESSION_COST="$(python3 -c "print(${SESSION_COST} + ${COST_1})" 2>/dev/null || \
             awk "BEGIN {printf \"%.6f\", ${SESSION_COST} + ${COST_1}}" 2>/dev/null || \
             echo "${SESSION_COST}")"
-          CUMULATIVE_COST="$(python3 -c "print(${CUMULATIVE_COST} + ${COST_1})" 2>/dev/null || \
+          CUMULATIVE_COST="$(python3 -c "print(${CdUMULATIVE_COST} + ${COST_1})" 2>/dev/null || \
             awk "BEGIN {printf \"%.6f\", ${CUMULATIVE_COST} + ${COST_1}}" 2>/dev/null || \
             echo "${CUMULATIVE_COST}")"
           
