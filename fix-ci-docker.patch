@@ -1,0 +1,27 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -42,11 +42,14 @@ jobs:
+         with:
+           unityVersion: ${{ env.UNITY_VERSION }}
+           githubToken: ${{ secrets.GITHUB_TOKEN }}
+-          useHub: true
++          # GameCI v4 runs via Docker; force a lighter Mono image (no il2cpp)
++          customImage: unityci/editor:ubuntu-6000.3.0f1-linux-mono-3
+ 
+       - uses: actions/upload-artifact@v4
+         with:
+           name: test-results
+@@ -79,11 +82,14 @@ jobs:
+         with:
+           unityVersion: ${{ env.UNITY_VERSION }}
+           targetPlatform: StandaloneLinux64
+           buildMethod: BuildLinuxMono.PerformBuild
+           buildsPath: build
+-          useHub: true
++          # Same: build on Mono image (lighter than il2cpp)
++          customImage: unityci/editor:ubuntu-6000.3.0f1-linux-mono-3
+ 
+       - uses: actions/upload-artifact@v4
+         with:
+           name: linux-build

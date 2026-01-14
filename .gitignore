@@ -14,5 +14,5 @@ Thumbs.db
 .vs/
 __pycache__/
 *.pyc
-apply_ci_fix.sh
+*.sh
 .github/workflows/*.bak
