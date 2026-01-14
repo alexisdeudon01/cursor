@@ -2,8 +2,8 @@ name: CI (Unity + GHCR cache + Claude AutoFix)
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch: {}
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,13 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Unity project settings
   UNITY_PROJECT_PATH: .
   UNITY_PLATFORM: StandaloneLinux64
   UNITY_LOG_DIR: .ci_logs
   MAX_AI_ITERS: "5"
 
-  # Prefer GHCR mirror (faster + fewer rate limits). Change tag si version Unity différente.
+  # Image Unity officielle GameCI (GHCR = cache GitHub)
   UNITY_EDITOR_IMAGE: ghcr.io/game-ci/unity-editor:ubuntu-6000.3.0f1-linux-il2cpp-3
 
 jobs:
@@ -30,62 +29,81 @@ jobs:
     timeout-minutes: 90
 
     steps:
+      # -------------------------
+      # Checkout
+      # -------------------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
           fetch-depth: 0
 
+      # -------------------------
+      # Preflight
+      # -------------------------
       - name: Preflight (repo sanity)
         shell: bash
         run: |
-          set -euo pipefail
+          set -e
           mkdir -p "${UNITY_LOG_DIR}"
-          echo "Branch: ${GITHUB_REF_NAME}" | tee "${UNITY_LOG_DIR}/preflight.txt"
-          echo "Commit: ${GITHUB_SHA}" | tee -a "${UNITY_LOG_DIR}/preflight.txt"
-          echo "Unity project path: ${UNITY_PROJECT_PATH}" | tee -a "${UNITY_LOG_DIR}/preflight.txt"
-          test -d "Assets" || (echo "❌ Missing Assets/ (not a Unity project?)" && exit 1)
-          test -d "ProjectSettings" || (echo "❌ Missing ProjectSettings/" && exit 1)
-          echo "✅ Project looks like Unity"
+          echo "Branch: $GITHUB_REF_NAME" | tee "${UNITY_LOG_DIR}/preflight.txt"
+          echo "Commit: $GITHUB_SHA" | tee -a "${UNITY_LOG_DIR}/preflight.txt"
 
+          test -d Assets || (echo "❌ Assets/ missing" && exit 1)
+          test -d ProjectSettings || (echo "❌ ProjectSettings/ missing" && exit 1)
+
+          echo "✅ Unity project detected"
+
+      # -------------------------
+      # Docker diagnostics
+      # -------------------------
       - name: Docker info
         shell: bash
         run: |
-          set -euo pipefail
           docker version
-          docker info | sed -n '1,120p'
+          docker info | head -n 50
 
+      # -------------------------
+      # GHCR login (cache images)
+      # -------------------------
       - name: Login to GHCR (optional)
         shell: bash
         run: |
-          set -euo pipefail
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin || true
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+          docker login ghcr.io -u "${{ github.actor }}" --password-stdin || true
 
-      - name: Pull Unity Editor image (warm cache)
+      # -------------------------
+      # Pull Unity image (cache warmup)
+      # -------------------------
+      - name: Pull Unity Editor image
         shell: bash
         run: |
-          set -euo pipefail
           docker pull "${UNITY_EDITOR_IMAGE}" || true
-          docker images | head -n 20
+          docker images | head -n 10
 
-      - name: Unity compile + tests with Claude AutoFix (up to 5 iters)
+      # -------------------------
+      # Unity compile + tests + AI loop
+      # -------------------------
+      - name: Unity compile + tests (Claude AutoFix loop)
         shell: bash
         env:
-          # Anthropic
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
-          # Unity licensing
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}secrets.UNITY
+
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-          # GitHub
+
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -e
           chmod +x scripts/unity_ai_loop.sh
           ./scripts/unity_ai_loop.sh
 
+      # -------------------------
+      # Upload logs + graph
+      # -------------------------
       - name: Upload logs + graph
         if: always()
         uses: actions/upload-artifact@v4
@@ -95,15 +113,12 @@ jobs:
             .ci_logs
             .ci_graph
 
-      - name: Report runner cost proxy (minutes)
+      # -------------------------
+      # Runner cost (simple, no API, no crash)
+      # -------------------------
+      - name: Runner cost note
         if: always()
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          echo "==== Actions usage (proxy) ===="
-          RUN_JSON="$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          DURATION_MS="$(python3 -c 'import json,sys; j=json.loads(sys.stdin.read()); print(j.get("run_duration_ms") or j.get("duration_ms") or 0)' <<< "$RUN_JSON")"
-          echo "run_duration_ms=$DURATION_MS"
-          python3 -c 'import math,sys; s=sys.argv[1]; ms=int(s) if s.isdigit() else 0; mins=(ms/60000) if ms else None; print(f"Approx runner time: {mins:.2f} minutes" if mins is not None else "Couldn'\''t read duration."); print("Cost depends on your GitHub plan (minutes quota / billing).")' "$DURATION_MS"
+          echo "ℹ️ Runner cost depends on GitHub plan."
+          echo "ℹ️ Duration visible in Actions UI → job timing."
