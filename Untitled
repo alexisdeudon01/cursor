@@ -1,0 +1,5 @@
+- name: Build & push CI image
+  uses: docker/build-push-action@v6
+  with:
+    context: .
+    file: Dockerfile.ci
