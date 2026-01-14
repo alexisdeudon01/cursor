@@ -144,10 +144,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/codex_autopr.py
-
-  docker-image:
-  uses: docker/build-push-action@v6
-  with:
-    context: .
-    file: Dockerfile.ci
-
