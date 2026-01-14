@@ -1,3 +1,8 @@
+---
+name: thebestclient9-analysis-report
+model: fast
+---
+
 # Analyse Auto-Improve avec IA - Version 9
 **Date**: 2026-01-13 23:28:49
 **Branche**: dev
