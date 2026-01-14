@@ -63,44 +63,6 @@ Développer un jeu 2D client-serveur avec serveur **full authoritative** et arch
 }
 ```
 
-### Composants NGO existants dans le projet
-
-Le projet contient déjà une architecture NGO complète :
-
-```
-Assets/Scripts/Networking/
-├── Client/
-│   ├── ClientBootstrap.cs      ← Bootstrap client
-│   └── Client.asmdef
-├── Server/
-│   ├── ServerBootstrap.cs      ← Bootstrap serveur
-│   ├── ConnectionController.cs ← Gestion connexions
-│   └── Server.asmdef
-├── Connections/
-│   ├── NetworkBootstrap.cs     ← Bootstrap réseau principal
-│   ├── NetworkConfigProvider.cs
-│   └── AppNetworkConfig.cs
-├── Player/
-│   ├── SessionRpcHub.cs        ← Hub RPC principal
-│   ├── PlayerManager.cs
-│   └── NetworkClientRegistry.cs
-├── Sessions/
-│   ├── GameSessionManager.cs   ← Gestion des sessions
-│   ├── GameSession.cs
-│   └── SessionState.cs
-├── RpcHandlers/
-│   ├── Base/BaseRpcHandler.cs
-│   └── Handlers/
-│       ├── GameStartHandler.cs
-│       ├── PlayerMovementHandler.cs
-│       ├── SceneLoadHandler.cs
-│       ├── SessionLifecycleHandler.cs
-│       └── SessionQueryHandler.cs
-└── StateSync/
-    ├── GameCommandClient.cs
-    ├── SessionRegistry.cs
-    └── ClientRegistry.cs
-```
 
 ---
 
@@ -125,41 +87,7 @@ Le projet utilise déjà un système de bootstrap :
 
 ---
 
-## 5. Client Full Graphique - UI TOOLKIT
 
-### ⚠️ RÈGLE : Le client utilise UI Toolkit (UXML + USS)
-
-Le projet contient déjà des fichiers UI Toolkit :
-
-```
-Assets/UI Toolkit/
-├── ConnectionUI.uxml
-├── NetworkBootstrapOverlay.uxml
-├── NetworkBootstrapOverlay.uss
-├── NetworkBootstrapProgress.uxml
-├── SessionLobby.uxml
-├── SessionLobby.uss
-└── SessionLobby_FlowGuide.uss
-```
-
-### Scripts UI existants
-
-```
-Assets/Scripts/UI/
-├── ConnectionUIController.cs
-├── SessionLobbyUI.cs
-├── GameCanvasManager.cs
-├── ProgressIndicator.cs
-├── ToastNotification.cs
-├── Common/
-│   ├── UIManager.cs
-│   ├── PopupBase.cs
-│   ├── ConfirmPopup.cs
-│   └── InputPopup.cs
-└── NetworkBootstrap/
-    ├── NetworkBootstrapProgressViewClient.cs
-    └── NetworkBootstrapProgress.uss
-```
 
 ---
 
